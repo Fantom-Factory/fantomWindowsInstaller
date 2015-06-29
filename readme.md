@@ -13,9 +13,9 @@ It installs Fantom on 32 bit and 64 bit systems, for normal users and admin user
 
 ![Installer Screenshot](https://bitbucket.org/repo/bdR87g/images/2143016538-screenshot.png)
 
-Download the latest installer on the [downloads page](downloads).
+Download the latest installer on the [downloads page](https://bitbucket.org/fantomfactory/fantom-installer/downloads).
 
-Issues and bugs to be reported on the [issues page](issues?status=new&status=open).
+Issues and bugs to be reported on the [issues page](https://bitbucket.org/fantomfactory/fantom-installer/issues?status=new&status=open).
 
 
 
