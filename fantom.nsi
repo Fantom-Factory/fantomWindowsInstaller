@@ -1,9 +1,10 @@
 #
-# Fantom installer
+# Fantom installerBUISLD
 #
 # Built with large strings build for 3.0b1 -> http://nsis.sourceforge.net/Special_Builds
 
 !define VERSION "1.0.67"
+!define AF_VERSION "1.0.67.001"
 !define MUI_HEADERIMAGE
 !define MUI_HEADERIMAGE_BITMAP "etc\banner.bmp"
 !define UNINST_REG_KEY	"Software\Microsoft\Windows\CurrentVersion\Uninstall\Fantom"
@@ -17,14 +18,18 @@
 !define MULTIUSER_MUI
 !define MULTIUSER_INSTALLMODE_COMMANDLINE
 
+# Uncomment for dev
+#!define MUI_FINISHPAGE_NOAUTOCLOSE
+#!define MUI_UNFINISHPAGE_NOAUTOCLOSE
+
 !include "MultiUser.nsh"	; Multi-Users
 !include "MUI2.nsh"			; Modern UI
 !include "x64.nsh"			; 64 bit detection
-!include "EnvVarUpdate.nsh"	; 
+!include "inc\EnvVarUpdate.nsh"	; 
 
 Name 				"Fantom ${VERSION}"
-OutFile 			"fantom-${VERSION}.exe"
-InstallDir 			"$PROGRAMFILES\fantom-${VERSION}"
+OutFile 			"fantom-${AF_VERSION}.exe"
+InstallDir 			"$PROGRAMFILES\fantom-${VERSION}\"
 
 BrandingText		"NSIS Fantom Installer by Steve Eynon"
 !define MUI_ICON	"etc\fantom.ico"
@@ -34,16 +39,17 @@ VIAddVersionKey "ProductName"		"Fantom"
 VIAddVersionKey "Comments"			"NSIS Fantom Installer by Steve Eynon"
 VIAddVersionKey "LegalCopyright"	"(c) 2011, Brian Frank and Andy Frank"
 VIAddVersionKey "FileDescription"	"Installer for the Fantom Language"
-VIAddVersionKey "FileVersion"		"${VERSION}"
+VIAddVersionKey "FileVersion"		"${AF_VERSION}"
 VIProductVersion "1.0.67.0"
 VIFileVersion	 "1.0.67.0"
 
-
+Var AF_ORIG_INSTDIR
 
 
 # ---- Pages ------------------------------------------------------------------
 !insertmacro MUI_PAGE_COMPONENTS
-!define MUI_PAGE_CUSTOMFUNCTION_PRE multiuser_pre_func
+!define MUI_PAGE_CUSTOMFUNCTION_PRE 	multiuser_pre_func
+!define MUI_PAGE_CUSTOMFUNCTION_LEAVE	multiuser_post_func
 !insertmacro MULTIUSER_PAGE_INSTALLMODE
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
@@ -55,9 +61,6 @@ VIFileVersion	 "1.0.67.0"
 
 !insertmacro MUI_LANGUAGE "English"
 
-ShowInstDetails show
-ShowUninstDetails show
-
 # see https://nsis-dev.github.io/NSIS-Forums/html/t-292340.html
 Function multiuser_pre_func
 	ClearErrors
@@ -67,6 +70,14 @@ Function multiuser_pre_func
 	${EndUnless}
 FunctionEnd
 
+Function multiuser_post_func
+	${If} "$MultiUser.InstallMode" == "CurrentUser"
+		StrCpy $INSTDIR "$LOCALAPPDATA\fantom-${VERSION}\"
+	${Else}
+		StrCpy $INSTDIR $AF_ORIG_INSTDIR
+	${EndIf}
+FunctionEnd
+
 # -----------------------------------------------------------------------------
 Section "Application Files" applicationFiles
 	SectionIn RO
@@ -74,14 +85,15 @@ Section "Application Files" applicationFiles
 	SetOutPath "$INSTDIR"
 	File	fantom\readme.html
 	File	fantom\readme.md
-	File	etc\fantom.ico
 
 	${If} ${RunningX64}
 		SetOutPath "$INSTDIR\bin"
 		File	/r fantom\bin-x64\*.*
+		File	etc\fantom.ico
 	${Else}
 		SetOutPath "$INSTDIR\bin"
 		File	/r fantom\bin-x32\*.*
+		File	etc\fantom.ico
 	${EndIf}
 
 	SetOutPath "$INSTDIR\etc"
@@ -98,21 +110,14 @@ Section "Application Files" applicationFiles
 		File	/r "fantom\lib\java\ext\win32-x86\*.*"
 	${EndIf}
 	
-	
-	
 	${If} "$MultiUser.InstallMode" == "AllUsers"
-		WriteRegStr HKLM "SYSTEM\CurrentControlSet\Control\Session Manager\Environment" "FAN2_HOME" "$INSTDIR"
-		${EnvVarUpdate} $0 "PATH" 		"A" HKLM "%FAN2_HOME%\bin"
-		#StrCpy $1 "HKLM"
+		WriteRegStr HKLM "SYSTEM\CurrentControlSet\Control\Session Manager\Environment" "FAN_HOME" "$INSTDIR"
+		${EnvVarUpdate} $0 "PATH" 		"A" HKLM "%FAN_HOME%\bin"
 	${Else}
-		WriteRegStr HKCU "Environment" "FAN2_HOME" "$INSTDIR"
-		${EnvVarUpdate} $0 "PATH" 		"A" HKCU "%FAN2_HOME%\bin"
-		#StrCpy $1 "HKCU"
+		WriteRegStr HKCU "Environment" "FAN_HOME" "$INSTDIR"
+		${EnvVarUpdate} $0 "PATH" 		"A" HKCU "%FAN_HOME%\bin"
 	${EndIf}
 	
-	#${EnvVarUpdate} $0 "FAN2_HOME"	"A" $1 "$\"$INSTDIR$\""
-	#${EnvVarUpdate} $0 "PATH" 		"A" $1 "%FAN2_HOME%\bin"
-
 	WriteUninstaller "$INSTDIR\Uninstall.exe"
 
 	# see http://nsis.sourceforge.net/Add_uninstall_information_to_Add/Remove_Programs#With_a_MultiUser_Installer
@@ -123,17 +128,15 @@ Section "Application Files" applicationFiles
 	WriteRegStr		SHCTX "${UNINST_REG_KEY}" "DisplayName" 		"Fantom ${VERSION}"
 	WriteRegStr		SHCTX "${UNINST_REG_KEY}" "Publisher" 			"Fantom-Factory"
 	WriteRegStr		SHCTX "${UNINST_REG_KEY}" "DisplayVersion"		"${VERSION}"
-	WriteRegStr		SHCTX "${UNINST_REG_KEY}" "DisplayIcon" 		"$INSTDIR\fantom.ico"
+	WriteRegStr		SHCTX "${UNINST_REG_KEY}" "DisplayIcon" 		"$INSTDIR\bin\fantom.ico"
 	WriteRegStr		SHCTX "${UNINST_REG_KEY}" "UninstallString" 	"$\"$INSTDIR\Uninstall.exe$\" /$MultiUser.InstallMode"
 	WriteRegStr 	SHCTX "${UNINST_REG_KEY}" "QuietUninstallString" "$\"$INSTDIR\Uninstall.exe$\" /$MultiUser.InstallMode /S"
-	
-	MessageBox MB_OK 'Wait!'
 SectionEnd
 
 
 
 # -----------------------------------------------------------------------------
-Section /o "Admin Tools" adminTools
+Section "Admin Tools" adminTools
 	SetOutPath "$INSTDIR\adm"
 	File	/r fantom\adm\*.*
 SectionEnd
@@ -141,7 +144,7 @@ SectionEnd
 
 
 # -----------------------------------------------------------------------------
-Section /o "Examples" examples
+Section "Examples" examples
 	SetOutPath "$INSTDIR\examples"
 	File	/r fantom\examples\*.*
 SectionEnd
@@ -149,10 +152,11 @@ SectionEnd
 
 
 # -----------------------------------------------------------------------------
-Section /o "Source Files" sourceFiles
+Section "Source Files" sourceFiles
 	SetOutPath "$INSTDIR\src"
 	File	/r fantom\src\*.*
 SectionEnd
+
 
 
 LangString DESC_applicationFiles	${LANG_ENGLISH} "Core Fantom libraries"
@@ -170,11 +174,14 @@ LangString DESC_sourceFiles			${LANG_ENGLISH} "Fantom source files"
 
 # -----------------------------------------------------------------------------
 Function .onInit
-	!insertmacro MULTIUSER_INIT
-	StrCpy $INSTDIR "$PROGRAMFILES32\fantom-${VERSION}"
+	StrCpy $INSTDIR "$PROGRAMFILES32\fantom-${VERSION}\"
 	${If} ${RunningX64}
-		StrCpy $INSTDIR "$PROGRAMFILES64\fantom-${VERSION}"
+		StrCpy $INSTDIR "$PROGRAMFILES64\fantom-${VERSION}\"
 	${EndIf}
+	StrCpy $AF_ORIG_INSTDIR $INSTDIR
+	
+	!insertmacro MULTIUSER_INIT
+
 	# AddSize doesn't work (reports wrong sizes) with the large strings build
 	SectionSetSize ${applicationFiles}	8284
 	SectionSetSize ${adminTools}		 143
@@ -188,11 +195,8 @@ FunctionEnd
 
 
 
-
-
 # -----------------------------------------------------------------------------
 Section "Uninstall"
-	Delete "$INSTDIR\fantom.ico"
 	Delete "$INSTDIR\readme.html"
 	Delete "$INSTDIR\readme.md"
 	Delete "$INSTDIR\Uninstall.exe"
@@ -205,11 +209,11 @@ Section "Uninstall"
 	RMDir /r /REBOOTOK "$INSTDIR\src"
 
 	${If} "$MultiUser.InstallMode" == "AllUsers"
-		${un.EnvVarUpdate} $0 "PATH" 	"R" HKLM "%FAN2_HOME%\bin"		
-		DeleteRegValue HKLM "SYSTEM\CurrentControlSet\Control\Session Manager\Environment" "FAN2_HOME"
+		DeleteRegValue HKLM "SYSTEM\CurrentControlSet\Control\Session Manager\Environment" "FAN_HOME"
+		${un.EnvVarUpdate} $0 "PATH" 	"R" HKLM "%FAN_HOME%\bin"		
 	${Else}
-		${un.EnvVarUpdate} $0 "PATH" 	"R" HKCU "%FAN2_HOME%\bin"
-		DeleteRegValue HKCU "Environment" "FAN2_HOME"
+		DeleteRegValue HKCU "Environment" "FAN_HOME"
+		${un.EnvVarUpdate} $0 "PATH" 	"R" HKCU "%FAN_HOME%\bin"
 	${EndIf}
 
 #	${If} "$MultiUser.InstallMode" == "AllUsers"
@@ -218,9 +222,8 @@ Section "Uninstall"
 #		StrCpy $1 "HKCU"
 #	${EndIf}
 #
-#	${un.EnvVarUpdate} $0 "PATH" 		"R" $1 "%FAN2_HOME%\bin"
-#	${un.EnvVarUpdate} $0 "FAN2_HOME"	"R" $1 "$\"%$INSTDIR$\""
+#	${un.EnvVarUpdate} $0 "PATH" 		"R" $1 "%FAN_HOME%\bin"
+#	${un.EnvVarUpdate} $0 "FAN_HOME"	"R" $1 "$\"%$INSTDIR$\""
 
 	DeleteRegKey SHCTX "${UNINST_REG_KEY}"
-	MessageBox MB_OK 'Wait!'
 SectionEnd
