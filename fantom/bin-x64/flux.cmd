@@ -1,0 +1,2 @@
+
+@call fan flux %*
