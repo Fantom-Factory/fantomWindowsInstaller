@@ -1,0 +1,4 @@
+
+syntax: regexp
+^fantom-\.*\.exe$
+^.git$
