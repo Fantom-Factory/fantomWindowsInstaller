@@ -1,4 +1,4 @@
 
-syntax: regexp
-^fantom-\.*\.exe$
-^.git$
+syntax: glob
+fantom-*.exe
+.git
