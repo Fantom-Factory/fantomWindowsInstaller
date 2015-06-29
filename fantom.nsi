@@ -33,7 +33,7 @@ InstallDir 			"$PROGRAMFILES\fantom-${VERSION}\"
 
 BrandingText		"NSIS Fantom Installer by Steve Eynon"
 !define MUI_ICON	"etc\fantom.ico"
-#!define MUI_UNICON	"etc\fantom.ico"
+!define MUI_UNICON	"etc\uninstall.ico"
 
 VIAddVersionKey "ProductName"		"Fantom"
 VIAddVersionKey "Comments"			"NSIS Fantom Installer by Steve Eynon"
