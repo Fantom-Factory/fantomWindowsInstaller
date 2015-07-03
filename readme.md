@@ -9,7 +9,7 @@
 
 This is a Windows installer for the [Fantom Programming Language](http://fantom.org/). 
 
-It installs Fantom on 32 bit and 64 bit systems, for normal users and admin users.
+It installs both 32 bit and 64 bit versions of Fantom, for normal users and admin users.
 
 ![Installer Screenshot](https://bitbucket.org/repo/bdR87g/images/2143016538-screenshot.png)
 
@@ -40,7 +40,7 @@ See [Path Env](http://fantom.org/doc/docLang/Env#PathEnv) for details.
 
 ## Pre-Requisites
 
-The assumes the system already has Java installed. JRE 1.6 or later is required to run Fantom programs.
+The installer assumes the system already has Java installed. JRE 1.6 or later is required to run Fantom programs.
 
 
 
