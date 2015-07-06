@@ -4,7 +4,7 @@
 # Built with large strings build for 3.0b1 -> http://nsis.sourceforge.net/Special_Builds
 
 !define VERSION "1.0.67"
-!define AF_VERSION "1.0.67.001"
+!define AF_VERSION "1.0.67.002"
 !define MUI_HEADERIMAGE
 !define MUI_HEADERIMAGE_BITMAP "etc\banner.bmp"
 !define UNINST_REG_KEY	"Software\Microsoft\Windows\CurrentVersion\Uninstall\Fantom"
