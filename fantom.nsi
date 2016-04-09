@@ -3,8 +3,8 @@
 #
 # Built with large strings build for 3.0b1 -> http://nsis.sourceforge.net/Special_Builds
 
-!define VERSION "1.0.67"
-!define AF_VERSION "1.0.67.002"
+!define VERSION "1.0.68"
+!define AF_VERSION "1.0.68.001"
 !define MUI_HEADERIMAGE
 !define MUI_HEADERIMAGE_BITMAP "etc\banner.bmp"
 !define UNINST_REG_KEY	"Software\Microsoft\Windows\CurrentVersion\Uninstall\Fantom"
@@ -22,9 +22,9 @@
 #!define MUI_FINISHPAGE_NOAUTOCLOSE
 #!define MUI_UNFINISHPAGE_NOAUTOCLOSE
 
-!include "MultiUser.nsh"	; Multi-Users
-!include "MUI2.nsh"			; Modern UI
-!include "x64.nsh"			; 64 bit detection
+!include "MultiUser.nsh"		; Multi-Users
+!include "MUI2.nsh"				; Modern UI
+!include "x64.nsh"				; 64 bit detection
 !include "inc\EnvVarUpdate.nsh"	; 
 
 Name 				"Fantom ${VERSION}"
@@ -40,8 +40,8 @@ VIAddVersionKey "Comments"			"NSIS Fantom Installer by Steve Eynon"
 VIAddVersionKey "LegalCopyright"	"(c) 2011, Brian Frank and Andy Frank"
 VIAddVersionKey "FileDescription"	"Installer for the Fantom Language"
 VIAddVersionKey "FileVersion"		"${AF_VERSION}"
-VIProductVersion "1.0.67.0"
-VIFileVersion	 "1.0.67.0"
+VIProductVersion "1.0.68.0"
+VIFileVersion	 "1.0.68.0"
 
 Var AF_ORIG_INSTDIR
 
@@ -86,29 +86,15 @@ Section "Application Files" applicationFiles
 	File	fantom\readme.html
 	File	fantom\readme.md
 
-	${If} ${RunningX64}
-		SetOutPath "$INSTDIR\bin"
-		File	/r fantom\bin-x64\*.*
-		File	etc\fantom.ico
-	${Else}
-		SetOutPath "$INSTDIR\bin"
-		File	/r fantom\bin-x32\*.*
-		File	etc\fantom.ico
-	${EndIf}
+	SetOutPath "$INSTDIR\bin"
+	File	/r fantom\bin\*.*
+	File	etc\fantom.ico
 
 	SetOutPath "$INSTDIR\etc"
 	File	/r fantom\etc\*.*
 
 	SetOutPath "$INSTDIR\lib"
 	File	/r /x ext "fantom\lib\*.*"
-  
-	${If} ${RunningX64}
-		SetOutPath "$INSTDIR\lib\java\ext\win32-x86_64"
-		File	/r "fantom\lib\java\ext\win32-x86_64\*.*"
-	${Else}
-		SetOutPath "$INSTDIR\lib\java\ext\win32-x86"
-		File	/r "fantom\lib\java\ext\win32-x86\*.*"
-	${EndIf}
 	
 	${If} "$MultiUser.InstallMode" == "AllUsers"
 		WriteRegStr HKLM "SYSTEM\CurrentControlSet\Control\Session Manager\Environment" "FAN_HOME" "$INSTDIR"
@@ -138,7 +124,15 @@ SectionEnd
 # -----------------------------------------------------------------------------
 Section "Admin Tools" adminTools
 	SetOutPath "$INSTDIR\adm"
-	File	/r fantom\adm\*.*
+	File	/r extras\adm\*.*
+SectionEnd
+
+
+
+# -----------------------------------------------------------------------------
+Section ".NET Runtime" dotnetRuntime
+	SetOutPath "$INSTDIR\lib\dotnet"
+	File	/r extras\dotnet\*.*
 SectionEnd
 
 
@@ -146,7 +140,7 @@ SectionEnd
 # -----------------------------------------------------------------------------
 Section "Examples" examples
 	SetOutPath "$INSTDIR\examples"
-	File	/r fantom\examples\*.*
+	File	/r extras\examples\*.*
 SectionEnd
 
 
@@ -154,20 +148,32 @@ SectionEnd
 # -----------------------------------------------------------------------------
 Section "Source Files" sourceFiles
 	SetOutPath "$INSTDIR\src"
-	File	/r fantom\src\*.*
+	File	/r extras\src\*.*
+SectionEnd
+
+
+
+# -----------------------------------------------------------------------------
+Section "SWT" swt
+	SetOutPath "$INSTDIR\lib\java"
+	File	/r extras\swt\*.*
 SectionEnd
 
 
 
 LangString DESC_applicationFiles	${LANG_ENGLISH} "Core Fantom libraries"
 LangString DESC_adminTools 			${LANG_ENGLISH} "Admin scripts and text editor configutaion files"
+LangString DESC_dotnetRuntime		${LANG_ENGLISH} ".NET Runtime"
 LangString DESC_examples			${LANG_ENGLISH} "Fantom examples"
 LangString DESC_sourceFiles			${LANG_ENGLISH} "Fantom source files"
+LangString DESC_swt					${LANG_ENGLISH} "Standard Widgit Toolkit"
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
 !insertmacro MUI_DESCRIPTION_TEXT ${applicationFiles}	$(DESC_applicationFiles)
 !insertmacro MUI_DESCRIPTION_TEXT ${adminTools} 		$(DESC_adminTools)
+!insertmacro MUI_DESCRIPTION_TEXT ${dotnetRuntime}		$(DESC_dotnetRuntime)
 !insertmacro MUI_DESCRIPTION_TEXT ${examples}			$(DESC_examples)
 !insertmacro MUI_DESCRIPTION_TEXT ${sourceFiles}		$(DESC_sourceFiles)
+!insertmacro MUI_DESCRIPTION_TEXT ${swt}				$(DESC_swt)
 !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
 
@@ -183,10 +189,12 @@ Function .onInit
 	!insertmacro MULTIUSER_INIT
 
 	# AddSize doesn't work (reports wrong sizes) with the large strings build
-	SectionSetSize ${applicationFiles}	8284
+	SectionSetSize ${applicationFiles}	6737
 	SectionSetSize ${adminTools}		 143
-	SectionSetSize ${examples}			 120
-	SectionSetSize ${sourceFiles} 		8550	
+	SectionSetSize ${dotnetRuntime}		 188
+	SectionSetSize ${examples}			 122
+	SectionSetSize ${sourceFiles} 		8743	
+	SectionSetSize ${swt}		 		3809
 FunctionEnd
 
 Function un.onInit

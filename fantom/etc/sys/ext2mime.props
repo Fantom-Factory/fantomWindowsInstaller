@@ -31,6 +31,8 @@ jpeg=image/jpeg
 jpg=image/jpeg
 log=text/plain; charset=utf-8
 js=text/javascript; charset=utf-8
+json=application/json
+map=application/json
 mp3=audio/mpeg3
 mpeg=video/mpeg
 obix=text/xml; charset=utf-8
@@ -39,6 +41,7 @@ ogg=audio/ogg
 ogv=video/ogg
 pdf=application/pdf
 png=image/png
+pod=application/zip
 ppt=application/vnd.ms-powerpoint
 pptx=application/vnd.openxmlformats-officedocument.presentationml.presentation
 props=text/plain; charset=utf-8
