@@ -11,9 +11,9 @@ Download the latest installer on the [Downloads Page](https://bitbucket.org/fant
 
 This is a Windows installer for the [Fantom](http://fantom.org/) Programming Language. 
 
-It installs both 32 bit and 64 bit versions of Fantom, for normal users and admin users.
+It installs Fantom 1.0.68, compete with SWT for 64 bit platforms, and sets all required environment variables.
 
-Issues and bugs related to this installer to be reported on the [issues page](https://bitbucket.org/fantomfactory/fantom-windows-installer/issues?status=new&status=open).
+Issues related to this installer may be reported on the [issues page](https://bitbucket.org/fantomfactory/fantom-windows-installer/issues?status=new&status=open).
 
 ![Installer Screenshot](https://bitbucket.org/repo/bdR87g/images/2089092671-FanWinInstaller.png)
 
