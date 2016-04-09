@@ -7,15 +7,15 @@
 
 ## Overview
 
-This is a Windows installer for the [Fantom Programming Language](http://fantom.org/). 
+Download the latest installer on the [Downloads Page](https://bitbucket.org/fantomfactory/fantom-windows-installer/downloads).
 
-Download the latest installer on the [downloads page](https://bitbucket.org/fantomfactory/fantom-installer/downloads).
+This is a Windows installer for the [Fantom](http://fantom.org/) Programming Language. 
 
 It installs both 32 bit and 64 bit versions of Fantom, for normal users and admin users.
 
-![Installer Screenshot](https://bitbucket.org/repo/bdR87g/images/2089092671-FanWinInstaller.png)
+Issues and bugs related to this installer to be reported on the [issues page](https://bitbucket.org/fantomfactory/fantom-windows-installer/issues?status=new&status=open).
 
-Issues and bugs related to this installer to be reported on the [issues page](https://bitbucket.org/fantomfactory/fantom-installer/issues?status=new&status=open).
+![Installer Screenshot](https://bitbucket.org/repo/bdR87g/images/2089092671-FanWinInstaller.png)
 
 
 
@@ -24,8 +24,6 @@ Issues and bugs related to this installer to be reported on the [issues page](ht
 The installer contains the standard Fantom distribution as available [here](https://bitbucket.org/fantom/fan-1.0/downloads/) and unpacks it into the selected directory.
 
 The installer then sets and updates the `FAN_HOME` and `PATH` environment variables. If Fantom is installed for *"Just Me"* then the user's environment variables are set. If installed for *"All Users"* then the System environment variables are updated.
-
-If installed on a 64 bit system then a 64 bit version of the `swt.jar` is installed into the `lib\java\ext\win32-x86_64` directory, and all `\bin\*.exe` files are replaced with `*.cmd` files. See [Fantom on Windows 64-Bit](http://www.fantomfactory.org/articles/fantom-on-windows-64-bit) for details.
 
 
 
@@ -38,7 +36,7 @@ This distribution differs slightly from the *official* distribution as this down
  - `errTraceMaxDepth` has been increased from 25 to 50 to give longer stack traces
  - `debug` has been set to `true` to enable JVM debugging in IDE's like [F4](http://www.xored.com/products/f4/)
 
-Plus, this download doesn't contain any of those annoying '.DS_Store' junk files for MacOS!
+Also, this download doesn't contain those annoying `.DS_Store` junk files for MacOS!
 
 
 
