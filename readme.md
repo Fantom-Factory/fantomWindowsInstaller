@@ -40,7 +40,7 @@ Also, this download doesn't contain those annoying `.DS_Store` junk files for Ma
 
 
 
-### Fantom Work Directory
+## Fantom Work Directory
 
 If you wish to keep your Fantom installation pristine and clean, then set up a work directory by setting these optional environment variables:
 
