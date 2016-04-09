@@ -1,0 +1,208 @@
+**************************************************************************
+** title:      Setup
+** author:     Brian Frank
+** created:    04 Jan 08
+** copyright:  Copyright (c) 2008, Brian Frank and Andy Frank
+** license:    Licensed under the Academic Free License version 3.0
+**************************************************************************
+
+Unix Setup [#unix]
+******************
+The Fantom distribution is packaged as a zip file.  Once unpacked
+you should add "bin" into your path:
+
+  PATH=$PATH:/apps/fantom/bin
+
+The Fantom launchers are implemented as a set of Bash shell
+scripts which all route to common code sourced in "bin/fanlaunch".
+The current implementation is pretty simple and requires that
+you have a "java" command available in your environment (we
+haven't tried Mono with Fantom yet).
+
+If the unpacked zip file doesn't have the executable permission
+set on script files, then the "adm/unixsetup" script will
+automatically call "chmod +x" on all the shell scripts and Fan
+build scripts:
+
+  bash adm/unixsetup
+
+Executable Scripts [#executableUnix]
+=====================================
+Fantom allows the first line of a source file to start with "#!" to run
+as a Unix shell script:
+
+  #! /usr/bin/env fan
+  class Script { static Void main() { echo("hi") } }
+
+  chmod +x myscript.fan
+  ./myscript.fan
+
+Windows Setup [#windows]
+************************
+The Fantom distribution is packaged as a zip file. Once unzipped, you should add
+the "bin" directory to your path:
+
+  PATH=%PATH%;C:\dev\fan\bin
+
+The Fantom launchers are implemented as a set of Windows Batch scripts
+which all route to common code in "bin\fanlaunch.bat". If your path is configured
+properly, you should be able to run
+
+  fan -version
+
+Executable Scripts [#executableWindows]
+=======================================
+You can always use the [fan]`Fan` launcher to run a script by passing
+it on the command line.  But ideally you will want to setup your environment
+so that you can call fan scripts directly as an executable file:
+
+  fan build.fan    // call using fan launcher explicitly
+  build            // call as executable script
+
+The following series of console commands will make ".fan" files
+executable assuming we installed to "c:\dev\fan":
+
+  assoc .fan=Fan
+  ftype Fan=cmd.exe /c call "C:\dev\fan\bin\fan.bat" "%1" %*
+  set pathext=%pathext%;.fan
+
+Java Runtime [#javaRuntime]
+===========================
+The launcher for Windows and Unix determines which java to use in the following order:
+
+1. If the 'FAN_JAVA' environment variable is set, then we assume it points to the
+"java.exe" to run.
+2. If the 'JAVA_HOME' environment variable is set, then we use "${JAVA_HOME}/bin/java"
+3. Otherwise, we fallback to the system "java"
+
+You can configure the JVM options by editing "etc/sys/config.props" and setting the
+"java.options" property. This is useful for modifying memory settings for the JVM.
+
+  // etc/sys/config.props
+  java.options=-Xmx128M
+
+Fantom currently requires Java version 1.5 or greater to run.
+Java 1.6 or greater is required to compile from source.
+
+You can also run Fantom directly without the launcher by adding "sys.jar"
+to your classpath and ensuring either the "fan_home" environment variable
+is set or the "fan.home" Java system property is set:
+
+  // via env var
+  C:\>set fan_home=c:\dev\fan
+  C:\>java -cp %fan_home%\lib\java\sys.jar fanx.tools.Fan -version
+
+  // via system property
+  C:\>java -cp c:\dev\fan\lib\java\sys.jar -Dfan.home=%fan_home% fanx.tools.Fan -version
+
+Each of the tools maps to a different class, for example to run 'fant' then run
+the Java class 'fanx.tools.Fant'.
+
+Substitutes [#substitutes]
+==========================
+Another feature of the launcher scripts is the ability to map
+specific script files to use an alternate Fantom runtime.  This technique
+is used to manage the [bootstrap build]`Bootstrap#substitutes` process.
+
+Launcher Debugger [#debugging]
+==============================
+You can set the "FAN_LAUNCHER_DEBUG" environment variable to "true" to debug
+the launcher script. This can be helpful if you are having problems getting your
+Java environment working:
+
+  C:\Dev\fantom\fan> set FAN_LAUNCHER_DEBUG=true
+
+  C:\Dev\fantom\fan> fan -version
+  -- LAUNCHER DEBUG ON
+  -- Launcher Args: Fan -version
+  -- FAN_HOME: C:\Dev\fantom\fan
+  -- Java: java
+  -- Fantom classpath: "C:\Dev\fantom\fan\lib\java\sys.jar";"C:\Dev\fantom\fan\lib\java\jline.jar"
+  -- Java Options: -Xmx512M
+  -- Fantom Tool: Fan
+  -- Tool Args:  -version
+  Fantom Launcher
+  Copyright (c) 2006-2013, Brian Frank and Andy Frank
+  Licensed under the Academic Free License version 3.0
+
+  Java Runtime:
+    java.version:    1.8.0_51
+    java.vm.name:    Java HotSpot(TM) 64-Bit Server VM
+    java.vm.vendor:  Oracle Corporation
+    java.vm.version: 25.51-b03
+    java.home:       C:\Program Files\Java\jre1.8.0_51
+    fan.platform:    win32-x86_64
+    fan.version:     1.0.67
+    fan.env:         sys::BootEnv
+    fan.home:        C:\Dev\fantom\fan
+
+Fantom Programs as Windows Services [#windowsServices]
+===================================
+The Fantom installation includes a binary called 'fansc.exe' in the "bin\" directory
+of the installation. The "fansc" (Fan Service Control) binary can be used to install
+and uninstall a Fantom program as a Windows Service. You can run the program without
+any arguments to see the usage.  There are a few requirements for using fansc
+
+1. Create a windows batch file launcher for your Fantom program. You can use any of
+the launchers in the "bin\" directory as a template.
+2. You must run the "fansc" program from a command prompt with elevated/administrator
+privileges.
+
+The following example illustrates installing the default WispService as a windows
+service:
+
+pre>
+// Create the bin/wisp.bat file with these contents:
+@echo off
+call %~dp0\fanlaunch.bat Fan wisp::WispService %*
+
+// Now install it, configuring it to run on port 8080
+C:\dev\fantom\fan\bin\> fansc.exe install MyWispService C:\dev\fantom\fan\bin\wisp.bat -port 8080
+<pre
+
+Java Extensions [#javaExt]
+**************************
+You can add Java JARs to the following directories to have them automatically
+loaded by the Fantom class loader:
+  - '{home}/lib/java/ext/'
+  - '{home}/lib/java/ext/{platform}'
+
+The platform directory is used for JARs which vary by platform.  For
+example the SWT JARs are distributed in platform specific directories.
+You can verify your platform running "fan -version".
+
+The preferred mechanism to add Java JARs into your Fantom environment
+is to convert them into a pod.
+
+Also see [JavaFFI]`docLang::JavaFFI#classpathRuntime`.
+
+JLine [#jline]
+**************
+Running command line applications such as [fansh]`Fansh` in the Java VM can
+be unpleasant in Unix and OS X environments because control keys such as the
+arrow keys are not handled.  You can add [JLine2]`https://github.com/jline/jline2`
+to your system classpath to fix this.  The built-in bash scripts will automatically
+put "lib/java/jline.jar" into the classpath.  You can download a pre-built
+"jline.jar" file from `http://repo1.maven.org/maven2/jline/jline/`.  If JLine
+is not installed, then 'java.lang.Console' is used as a fallback.  To integrate
+command line support into your application use `sys::Env.prompt`.
+
+SWT Support [#swt]
+******************
+The Fantom distribution ships with SWT support for a a couple common
+platforms.  If your platform is not supported, follow these steps
+to get SWT working:
+  1. Verify your platform identifier using "fan -version" (see
+     `sys::Env.platform`)
+  2. Download your platform's "swt.jar" from
+     [eclipse.org]`http://www.eclipse.org/swt/`
+  3. Put "swt.jar" into '{home}/lib/java/ext/{platform}/swt.jar'
+
+You can easily test SWT support by attempting to run `Flux`.
+
+Env [#env]
+**********
+The default behavior of Fantom is to manage all its files under the
+installation directory.  But you can boot Fantom using alternative
+environments to customize how your deployment is structured.
+See `docLang::Env` for details.
