@@ -1,10 +1,10 @@
 #
-# Fantom installerBUISLD
+# Fantom installer
 #
 # Built with large strings build for 3.0b1 -> http://nsis.sourceforge.net/Special_Builds
 
-!define VERSION "1.0.68"
-!define AF_VERSION "1.0.68.001"
+!define VERSION "1.0.69"
+!define AF_VERSION "1.0.69.001"
 !define MUI_HEADERIMAGE
 !define MUI_HEADERIMAGE_BITMAP "etc\banner.bmp"
 !define UNINST_REG_KEY	"Software\Microsoft\Windows\CurrentVersion\Uninstall\Fantom"
@@ -40,8 +40,8 @@ VIAddVersionKey "Comments"			"NSIS Fantom Installer by Steve Eynon"
 VIAddVersionKey "LegalCopyright"	"(c) 2011, Brian Frank and Andy Frank"
 VIAddVersionKey "FileDescription"	"Installer for the Fantom Language"
 VIAddVersionKey "FileVersion"		"${AF_VERSION}"
-VIProductVersion "1.0.68.0"
-VIFileVersion	 "1.0.68.0"
+VIProductVersion "1.0.69.0"
+VIFileVersion	 "1.0.69.0"
 
 Var AF_ORIG_INSTDIR
 
