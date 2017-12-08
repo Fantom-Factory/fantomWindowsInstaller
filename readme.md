@@ -1,4 +1,4 @@
-# Fantom v1.0.69 for Windows
+# Fantom v1.0.70 for Windows
 ---
 [![Written for: Fantom](http://img.shields.io/badge/written%20for-Fantom-lightgray.svg)](http://fantom.org/)
 ![Licence: ISC](http://img.shields.io/badge/licence-ISC-blue.svg)
@@ -11,11 +11,11 @@ Download the latest installer on the [Downloads Page](https://bitbucket.org/fant
 
 This is a Windows installer for the [Fantom](http://fantom.org/) Programming Language. 
 
-It installs Fantom 1.0.69, compete with SWT for 64 bit platforms, and sets all required environment variables.
+It installs Fantom 1.0.70, compete with SWT for 64 bit platforms, and sets all required environment variables.
 
 Issues related to this installer may be reported on the [issues page](https://bitbucket.org/fantomfactory/fantom-windows-installer/issues?status=new&status=open).
 
-![Installer Screenshot](https://bitbucket.org/repo/bdR87g/images/2089092671-FanWinInstaller.png)
+![Installer Screenshot](https://bytebucket.org/fantomfactory/fantom-windows-installer/raw/tip/etc/screenshot.png)
 
 
 
@@ -53,15 +53,15 @@ See [Path Env](http://fantom.org/doc/docLang/Env#PathEnv) for details.
 
 ## Pre-Requisites
 
-The installer assumes the system already has Java installed. JRE 1.6 or later is required to run Fantom programs.
+The installer assumes the system already has Java installed. JRE 1.7 or later is required to run Fantom programs.
 
 
 
 ## Built by NSIS
 
-The installer was created with [NSIS 3.0b1](http://nsis.sourceforge.net/Main_Page) and built with the [large strings](http://nsis.sourceforge.net/Special_Builds) variant to work around problems inherent with altering the `PATH` environment variable.
+The installer was created with [NSIS 3.02.1](http://nsis.sourceforge.net/Main_Page) and built with the [large strings](http://nsis.sourceforge.net/Special_Builds) variant to work around problems inherent with altering the `PATH` environment variable.
 
-The `/SOLID lzma` compressor created the smallest installer (10,416,155 bytes).
+The `/SOLID lzma` compressor created the smallest installer.
 
 
 
