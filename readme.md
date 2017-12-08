@@ -1,6 +1,6 @@
 # Fantom v1.0.70 for Windows
 ---
-[![Written for: Fantom](http://img.shields.io/badge/written%20for-Fantom-lightgray.svg)](http://fantom.org/)
+[![Written for: Fantom](http://img.shields.io/badge/written%20for-Fantom-lightgray.svg)](http://fantom-lang.org/)
 ![Licence: ISC](http://img.shields.io/badge/licence-ISC-blue.svg)
 
 
@@ -9,7 +9,7 @@
 
 Download the latest installer on the [Downloads Page](https://bitbucket.org/fantomfactory/fantom-windows-installer/downloads).
 
-This is a Windows installer for the [Fantom](http://fantom.org/) Programming Language. 
+This is a Windows installer for the [Fantom](http://fantom-lang.org/) Programming Language. 
 
 It installs Fantom 1.0.70, compete with SWT for 64 bit platforms, and sets all required environment variables.
 
