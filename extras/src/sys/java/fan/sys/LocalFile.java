@@ -69,17 +69,28 @@ public class LocalFile
   {
     String path = uri.pathStr();
     int len = path.length();
-    StringBuilder s = null;
+
+    // check for escapes
+    boolean hasEsc = false;
+    for (int i=0; i<len; ++i)
+      if (path.charAt(i) == '\\') { hasEsc = true; break; }
+    if (!hasEsc) return path;
+
+    // normalize
+    StringBuilder s = new StringBuilder(len);
     for (int i=0; i<len; ++i)
     {
       int c = path.charAt(i);
       if (c == '\\')
       {
-        if (s == null) { s = new StringBuilder(); s.append(path, 0, i); }
+        i++;
+        if (i>=len) throw ArgErr.make("Invalid Uri esc: " + path);
+        c = path.charAt(i);
+        if (c == '.') throw ArgErr.make("Invalid Uri esc: " + path);
       }
-      else if (s != null) s.append((char)c);
+      s.append((char)c);
     }
-    return s == null ? path : s.toString();
+    return s.toString();
   }
 
   public static String fileNameToUriName(String name)
@@ -211,6 +222,8 @@ public class LocalFile
     file.setLastModified(time.toJava());
   }
 
+  public boolean isHidden() { return file.isHidden(); }
+
   public String osPath()
   {
     return file.getPath();
@@ -285,6 +298,38 @@ public class LocalFile
     {
       throw IOErr.make(e);
     }
+  }
+
+//////////////////////////////////////////////////////////////////////////
+// Trap
+//////////////////////////////////////////////////////////////////////////
+
+  public Object trap(String name, List args)
+  {
+    // undocumented local file access
+    Object arg = args == null ? null : args.first();
+    if (name.equals("readable"))   return trapReadable(arg);
+    if (name.equals("writable"))   return trapWritable(arg);
+    if (name.equals("executable")) return trapExecutable(arg);
+    return super.trap(name, args);
+  }
+
+  private Object trapReadable(Object arg)
+  {
+    if (arg == null) return this.file.canRead();
+    else return this.file.setReadable((Boolean)arg);
+  }
+
+  private Object trapWritable(Object arg)
+  {
+    if (arg == null) return this.file.canWrite();
+    else return this.file.setWritable((Boolean)arg);
+  }
+
+  private Object trapExecutable(Object arg)
+  {
+    if (arg == null) return this.file.canExecute();
+    else return this.file.setExecutable((Boolean)arg);
   }
 
 //////////////////////////////////////////////////////////////////////////

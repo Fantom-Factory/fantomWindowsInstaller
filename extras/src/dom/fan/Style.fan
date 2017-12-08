@@ -6,6 +6,8 @@
 //   19 Dec 2014  Andy Frank  Creation
 //
 
+using concurrent
+
 **
 ** Style models CSS style properties for an Elem.
 **
@@ -45,6 +47,35 @@
     return this
   }
 
+  **
+  ** Add a psuedo-class CSS definietion to this element. A new
+  ** class name is auto-generated and used to prefix 'name',
+  ** 'name' must start with the ':' character.  Returns the
+  ** generated class name.
+  **
+  **   style.addPseudoClass(":hover", "background: #eee")
+  **
+  Str addPseudoClass(Str name, Str css)
+  {
+    if (!name.startsWith(":"))
+      throw ArgErr("Pseudo-class name must start with ':'")
+
+    key := "$name/$css"
+    cls := pseudoCache[key]
+    if (cls == null)
+    {
+      cls = "dom-style-autogen-$counter.getAndIncrement"
+      Win.cur.doc.head.add(Elem("style") {
+        it->type = "text/css"
+        it.text  = ".${cls}${name} { $css }"
+      })
+      pseudoCache[key] = cls
+    }
+
+    addClass(cls)
+    return cls
+  }
+
   ** Clear all style declarations.
   native This clear()
 
@@ -65,7 +96,9 @@
   **   style["color"] = "#f00"
   @Operator This set(Str name, Obj? val)
   {
-    Str? sval
+    if (val == null) { setProp(name, null); return this }
+
+    sval := ""
     switch (val?.typeof)
     {
       case Duration#: sval = "${val->toMillis}ms"
@@ -135,8 +168,8 @@
     h := StrBuf()
     s.each |ch|
     {
-      if (ch.isLower) h.addChar(ch)
-      else h.addChar('-').addChar(ch.lower)
+      if (ch.isUpper) h.addChar('-').addChar(ch.lower)
+      else h.addChar(ch)
     }
     return h.toStr
   }
@@ -182,10 +215,15 @@
     "flex-wrap",
     "justify-content",
     "transform",
+    "user-select",
   ])
 
   ** Property values that require vendor prefixes.
   private const static Str[] vendorVals := [
     "linear-gradient"
   ]
+
+  private static const AtomicInt counter := AtomicInt(0)
+  private static Str:Str pseudoCache() { (pseudoCacheRef.val as Unsafe).val }
+  private static const AtomicRef pseudoCacheRef := AtomicRef(Unsafe(Str:Str[:]))
 }

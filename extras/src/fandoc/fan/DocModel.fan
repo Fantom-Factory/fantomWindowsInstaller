@@ -26,7 +26,8 @@ enum class DocNodeId
   strong,
   code,
   link,
-  image
+  image,
+  hr
 }
 
 **************************************************************************
@@ -202,7 +203,7 @@ abstract class DocElem : DocNode
   ** node (if applicable).  If the node is arlready parented
   ** thorw ArgErr. Return this.
   **
-  This add(DocNode node)
+  @Operator This add(DocNode node)
   {
     if (node.parent != null) throw ArgErr("Node already parented: $node")
     if (!kids.isEmpty)
@@ -239,7 +240,7 @@ abstract class DocElem : DocNode
   This insert(Int index, DocNode node)
   {
     tail := DocNode[node]
-    kids.eachRange(index..-1) |child| { remove(child); tail.add(child) }
+    kids.dup.eachRange(index..-1) |child| { remove(child); tail.add(child) }
     tail.each { add(it) }
     return this
   }
@@ -561,4 +562,20 @@ class Image : DocElem
   override Bool isInline() { return true }
   Str uri
   Str alt
+  Str? size  // formatted {w}x{h}
+}
+
+**************************************************************************
+** Hr
+**************************************************************************
+
+**
+** Hr models a horizontal rule.
+**
+@Js
+class Hr : DocElem
+{
+  override DocNodeId id() { return DocNodeId.hr }
+  override Str htmlName() { return "hr" }
+  override Bool isInline() { return false }
 }
