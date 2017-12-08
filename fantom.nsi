@@ -3,10 +3,10 @@
 #
 # Built with large strings build for 3.0b1 -> http://nsis.sourceforge.net/Special_Builds
 
-!define VERSION "1.0.69"
-!define AF_VERSION "1.0.69.001"
+!define VERSION "1.0.70"
+!define AF_VERSION "1.0.70"
 !define MUI_HEADERIMAGE
-!define MUI_HEADERIMAGE_BITMAP "etc\banner.bmp"
+!define MUI_HEADERIMAGE_BITMAP "etc\fantomBanner.bmp"
 !define UNINST_REG_KEY	"Software\Microsoft\Windows\CurrentVersion\Uninstall\Fantom"
 
 !define MULTIUSER_EXECUTIONLEVEL Highest
@@ -40,8 +40,8 @@ VIAddVersionKey "Comments"			"NSIS Fantom Installer by Steve Eynon"
 VIAddVersionKey "LegalCopyright"	"(c) 2011, Brian Frank and Andy Frank"
 VIAddVersionKey "FileDescription"	"Installer for the Fantom Language"
 VIAddVersionKey "FileVersion"		"${AF_VERSION}"
-VIProductVersion "1.0.69.0"
-VIFileVersion	 "1.0.69.0"
+VIProductVersion "1.0.70.0"
+VIFileVersion	 "1.0.70.0"
 
 Var AF_ORIG_INSTDIR
 
@@ -189,12 +189,12 @@ Function .onInit
 	!insertmacro MULTIUSER_INIT
 
 	# AddSize doesn't work (reports wrong sizes) with the large strings build
-	SectionSetSize ${applicationFiles}	6737
+	SectionSetSize ${applicationFiles}	7917
 	SectionSetSize ${adminTools}		 143
 	SectionSetSize ${dotnetRuntime}		 188
 	SectionSetSize ${examples}			 122
-	SectionSetSize ${sourceFiles} 		8743	
-	SectionSetSize ${swt}		 		3809
+	SectionSetSize ${sourceFiles} 		9668	
+	SectionSetSize ${swt}		 		3900
 FunctionEnd
 
 Function un.onInit
