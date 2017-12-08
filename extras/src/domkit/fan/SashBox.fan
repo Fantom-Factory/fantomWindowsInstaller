@@ -7,21 +7,22 @@
 //
 
 using dom
+using graphics
 
 **
 ** SashBox lays out children in a single direction allowing both
 ** fixed and pertange sizes that can fill the parent container.
 **
-** See also: [pod doc]`pod-doc#sashBox`
+** See also: [docDomkit]`docDomkit::Layout#sashBox`
 **
 @Js class SashBox : Box
 {
   new make() : super()
   {
     this.style.addClass("domkit-SashBox")
-    this.onEvent(EventType.mouseDown, true) |e| { onMouseDown(e) }
-    this.onEvent(EventType.mouseUp,   true) |e| { onMouseUp(e)   }
-    this.onEvent(EventType.mouseMove, true) |e| { onMouseMove(e) }
+    this.onEvent("mousedown", true) |e| { onMouseDown(e) }
+    this.onEvent("mouseup",   true) |e| { onMouseUp(e)   }
+    this.onEvent("mousemove", true) |e| { onMouseMove(e) }
   }
 
   **
@@ -47,6 +48,7 @@ using dom
     {
       &sizes = it
       dims = it.map |s| { CssDim(s) }.toImmutable
+      applyStyle
     }
   }
 
@@ -75,11 +77,12 @@ using dom
       if (d.unit == "%" && px > 0)
       {
         per := d.val.toFloat / 100f * px.toFloat
-        css = "calc($d.toStr - ${per.toInt}px)"
+        css = "calc($d.toStr - ${per}px)"
       }
 
-      if (kid isnot FlexBox)
-        kid.style->display = "block"
+      kid.style->display = css == "0px"
+         ? "none"
+         : (kid is FlexBox ? "flex" : "block")
 
       vert := dir == Dir.down
       kid.style->float  = vert ? "none" : "left"
@@ -93,7 +96,7 @@ using dom
     if (!resizable) return
     if (resizeIndex == null) return
 
-    p := e.pagePos.rel(this)
+    p := this.relPos(e.pagePos)
     this.active = true
 
     splitter = Elem { it.style.addClass("domkit-SashBox-splitter") }
@@ -118,18 +121,18 @@ using dom
     if (!resizable) return
     if (!active) return
 
-    p := e.pagePos.rel(this)
+    p := this.relPos(e.pagePos)
     kids := children
     if (dir == Dir.down)
     {
       y := 0
-      for (i:=0; i<=resizeIndex; i++) y += kids[i].size.h
+      for (i:=0; i<=resizeIndex; i++) y += kids[i].size.h.toInt
       applyResize(resizeIndex, p.y - y)
     }
     else
     {
       x := 0
-      for (i:=0; i<=resizeIndex; i++) x += kids[i].size.w
+      for (i:=0; i<=resizeIndex; i++) x += kids[i].size.w.toInt
       applyResize(resizeIndex, p.x - x)
     }
 
@@ -142,7 +145,7 @@ using dom
   {
     if (!resizable) return
 
-    p := e.pagePos.rel(this)
+    p := this.relPos(e.pagePos)
     if (active)
     {
       // drag splitter
@@ -161,8 +164,8 @@ using dom
     else
     {
       // check for roll-over cursor
-      x := 0
-      y := 0
+      x := 0f
+      y := 0f
       kids := children
 
       for (i:=0; i<kids.size-1; i++)
@@ -170,7 +173,7 @@ using dom
         if (dir == Dir.down)
         {
           // vert
-          y += kids[i].size.h
+          y += kids[i].size.h.toInt
           if (p.y >= y-3 && p.y <= y+3)
           {
             this.style->cursor = "row-resize"
@@ -182,7 +185,7 @@ using dom
         else
         {
           // horiz
-          x += kids[i].size.w
+          x += kids[i].size.w.toInt
           if (p.x >= x-3 && p.x <= x+3)
           {
             this.style->cursor = "col-resize"
@@ -198,7 +201,7 @@ using dom
     }
   }
 
-  private Void applyResize(Int index, Int delta)
+  private Void applyResize(Int index, Float delta)
   {
     // convert to % if needed
     sizesToPercent
@@ -216,7 +219,7 @@ using dom
     // split delta between adjacent children
     working := sizes.dup
     sz := dir == Dir.down ? this.size.h : this.size.w
-    dp := delta.toFloat / sz.toFloat * 100f
+    dp := delta / sz * 100f
     av := (dav + dp).toLocale("0.00").toFloat
     bv := (dav + dbv - av).toLocale("0.00").toFloat
     if (av < min)

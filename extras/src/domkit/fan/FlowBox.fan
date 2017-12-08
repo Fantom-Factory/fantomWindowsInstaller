@@ -11,7 +11,7 @@ using dom
 **
 ** FlowBox lays out its children in a one-directional flow.
 **
-** See also: [pod doc]`pod-doc#flowBox`
+** See also: [docDomkit]`docDomkit::Layout#flowBox`
 **
 @Js class FlowBox : Box
 {
@@ -31,6 +31,9 @@ using dom
   ** than the number of children, then 'gaps' will be cycled to
   ** apply to all children.
   Str[] gaps := Str[,]
+  {
+    set { &gaps=it; applyStyle }
+  }
 
   protected override Void onAdd(Elem c)    { applyStyle }
   protected override Void onRemove(Elem c) { applyStyle }
@@ -40,6 +43,7 @@ using dom
     kids := children
     text := kids.any |kid| { kid is TextField }
 
+    Int? lastGap
     kids.each |kid,i|
     {
       // add gap
@@ -51,17 +55,22 @@ using dom
         if (gap > 0 && i < kids.size-1) kid.style["margin-right"] = s
       }
 
+      // check width
+      if (kid.style.effective("width") == "100%") kid.style->width  = "auto"
+
       // add join classes
       // TODO FIXIT: more optimized way than toggling classes on each add/remove?
-      if (kids.size > 1 && gap == -1)
+      if (kids.size > 1 && (gap == -1 || lastGap == -1))
       {
-        // TODO: be nice to do purely in CSS
-        if (text) kid.style.addClass("domkit-group-textfield")
-
-        if (i == 0) kid.style.addClass("domkit-group-left")
-        else if (i < kids.size-1) kid.style.removeClass("domkit-group-right").addClass("domkit-group-middle")
-        else kid.style.addClass("domkit-group-right")
+        if (i == 0)
+          kid.style.addClass("group-left")
+        else if (i < kids.size-1 && gap == -1)
+          kid.style.removeClass("group-right").addClass("group-middle")
+        else
+          kid.style.addClass("group-right")
       }
+
+      lastGap = gap
     }
   }
 }

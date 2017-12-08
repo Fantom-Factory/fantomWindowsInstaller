@@ -11,7 +11,7 @@ using dom
 **
 ** GridBox lays its children out in a two dimensional grid.
 **
-** See also: [pod doc]`pod-doc#gridBox`
+** See also: [docDomkit]`docDomkit::Layout#gridBox`
 **
 @Js class GridBox : Box
 {
@@ -25,18 +25,18 @@ using dom
     this.add(table)
   }
 
-  ** How grid content is aligned against left-over space. Valid
-  ** values are "left", "right", "center", or "fill".
-  Str align := "left"
+  ** How grid content is aligned horizontally against left-over
+  ** space. Valid values are 'left', 'right', 'center', or 'fill'.
+  Align halign := Align.left
   {
     set
     {
-      switch (&align = it)
+      switch (&halign = it)
       {
-        case "left":   this.style["text-align"] = "left"
-        case "center": this.style["text-align"] = "center"
-        case "right":  this.style["text-align"] = "right"
-        case "fill":   table.style["width"] = "100%"
+        case Align.left:   table.style->margin = null
+        case Align.center: table.style->margin = "0 auto"
+        case Align.right:  table.style->margin = "0 0 0 auto"
+        case Align.fill:   table.style->width  = "100%"
       }
     }
   }
@@ -45,7 +45,7 @@ using dom
   ** Set style for cells. Valid values for 'col' and 'row':
   **  - Specific index (0, 1, 2, etc)
   **  - Range of indexes (0..4, 7..<8, etc)
-  **  - "all":  apply to all row or columns
+  **  - "*":    apply to all row or columns
   **  - "even": apply only to even row or columns indexes
   **  - "odd":  apply only to odd row or column indexes
   **
@@ -62,6 +62,7 @@ using dom
     else if (col is Range) ((Range)col).each |c| { cstyleMap["$c:$row"] = style }
     else if (row is Range) ((Range)row).each |r| { cstyleMap["$col:$r"] = style }
     else cstyleMap["$col:$row"] = style
+    if (!init) updateCellStyle
     return this
   }
 
@@ -75,35 +76,63 @@ using dom
     {
       td := Elem("td")
       cs := colspan.getSafe(c)
-      if (cs != null) td["colspan"] = cs
+      if (cs != null) td["colspan"] = cs.toStr
       applyCellStyle(c+cx, r, td)
       if (elem != null) td.add(elem)
       cx += cs==null ? 0 : cs-1
       tr.add(td)
     }
     tbody.add(tr)
+    init = false
     return this
+  }
+
+  ** The number of rows in this GridBox.
+  Int numRows() { tbody.children.size }
+
+  ** Remove the row of cells at given index.
+  This removeRow(Int index)
+  {
+    row := tbody.children.getSafe(index)
+    if (row != null) tbody.removeChild(row)
+    return this
+  }
+
+  ** Remove all rows of cells for this GridBox.
+  This removeAllRows()
+  {
+    tbody.removeAll
+    return this
+  }
+
+  ** Update cell styles on existing children.
+  private Void updateCellStyle()
+  {
+    tbody.children.each |tr,r|
+    {
+      tr.children.each |td,c| { applyCellStyle(c, r, td) }
+    }
   }
 
   ** Find all styles to apply this to cell.
   private Void applyCellStyle(Int c, Int r, Elem td)
   {
     // all
-    setCellStyle("all:all", td)
+    setCellStyle("*:*", td)
 
     // even/odd
     calt := c.isOdd ? "odd" : "even"
     ralt := r.isOdd ? "odd" : "even"
-    setCellStyle("all:$ralt",   td)
-    setCellStyle("$calt:all",   td)
+    setCellStyle("*:$ralt",   td)
+    setCellStyle("$calt:*",   td)
     setCellStyle("$calt:$ralt", td)
 
     // row index
-    setCellStyle("all:$r",   td)
+    setCellStyle("*:$r",   td)
     setCellStyle("$calt:$r", td)
 
     // col index
-    setCellStyle("$c:all",  td)
+    setCellStyle("$c:*",  td)
     setCellStyle("$c:$ralt", td)
 
     // cell index
@@ -119,5 +148,6 @@ using dom
 
   private Elem table
   private Elem tbody
+  private Bool init := true
   private Str:Str cstyleMap := [:]
 }

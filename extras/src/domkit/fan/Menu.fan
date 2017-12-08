@@ -7,9 +7,12 @@
 //
 
 using dom
+using graphics
 
 **
 ** Popup menu
+**
+** See also: [docDomkit]`docDomkit::Controls#menu`, `MenuItem`
 **
 @Js class Menu : Popup
 {
@@ -18,8 +21,8 @@ using dom
     this->tabIndex = 0
     this.style.addClass("domkit-Menu")
     this.onOpen { this.focus }
-    this.onEvent(EventType.mouseLeave, false) { select(null) }
-    this.onEvent(EventType.mouseOver, false) |e|
+    this.onEvent("mouseleave", false) { select(null) }
+    this.onEvent("mouseover", false) |e|
     {
       // keyboard scrolling generates move/over events we need to filter out
       if (lastEvent > 0) { lastEvent=0; return }
@@ -27,25 +30,39 @@ using dom
       // bubble to MenuItem
       Elem? t := e.target
       while (t != null && t isnot MenuItem) t = t?.parent
-      if (t == null) return
+      if (t == null) { select(null); return }
 
       // check for selection
       index := children.findIndex |k| { t == k }
       if (index != null) select(index)
       lastEvent = 0
     }
-    this.onEvent(EventType.mouseUp, false) |e| { fireAction }
-    this.onEvent(EventType.keyDown, false) |e|
+    this.onEvent("mousedown", false) |e| { armed=true }
+    this.onEvent("mouseup",   false) |e| { if (armed) fireAction(e) }
+    this.onEvent("keydown", false) |e|
     {
       switch (e.key)
       {
         case Key.esc:   close
-        case Key.up:    e.stop; lastEvent=1; select(selIndex==null ? 0 : selIndex-1)
-        case Key.down:  e.stop; lastEvent=1; select(selIndex==null ? 0 : selIndex+1)
+        case Key.up:    e.stop; lastEvent=1; select(selIndex==null ? 0 : findPrev(selIndex))
+        case Key.down:  e.stop; lastEvent=1; select(selIndex==null ? 0 : findNext(selIndex))
         case Key.space: // fall-thru
-        case Key.enter: e.stop; fireAction
+        case Key.enter: e.stop; fireAction(e)
+        default:
+          if (onCustomKeyDown != null)
+          {
+            e.stop
+            lastEvent = 1
+            onCustomKeyDown.call(e)
+          }
       }
     }
+  }
+
+  protected override Void onBeforeOpen()
+  {
+    // reselect to force selected item to scroll into view
+    if (selIndex != null) select(selIndex)
   }
 
   // TEMP TODO FIXIT: ListButton.makeLisbox
@@ -80,19 +97,37 @@ using dom
     iy := item.pos.y
     ih := item.size.h
 
-    if (sy > iy) this.scrollPos = Pos(0, iy)
-    else if (sy + mh < iy + ih) this.scrollPos = Pos(0, iy + ih - mh)
+    if (sy > iy) this.scrollPos = Point(0f, iy)
+    else if (sy + mh < iy + ih) this.scrollPos = Point(0f, (iy + ih - mh))
   }
 
-  private Void fireAction()
+  private Int? findPrev(Int start)
+  {
+    i := start
+    while (--i >= 0) { if (children[i] is MenuItem) return i }
+    return start
+  }
+
+  private Int? findNext(Int start)
+  {
+    i := start
+    while (++i < children.size) { if (children[i] is MenuItem) return i }
+    return start
+  }
+
+  private Void fireAction(Event e)
   {
     if (selIndex == null) return
     MenuItem item := children[selIndex]
-    item.fireAction
+    item.fireAction(e)
   }
 
+  // internal use only
+  internal Func? onCustomKeyDown := null
+
   private Int? selIndex
-  private Int lastEvent := 0  // 0=mouse, 1=key
+  private Int lastEvent := 0   // 0=mouse, 1=key
+  private Bool armed := false  // don't fire mouseUp unless we first detect a mouse down
 }
 
 **
@@ -102,17 +137,21 @@ using dom
 {
   new make() : super()
   {
-    this.style.addClass("domkit-MenuItem")
+    this.style.addClass("domkit-control domkit-MenuItem")
   }
 
   ** Callback when item is selected.
   Void onAction(|This| f) { this.cbAction = f }
 
-  internal Void fireAction()
+  internal Void fireAction(Event e)
   {
+    _event = e
     (parent as Popup)?.close
     cbAction?.call(this)
   }
+
+  // TODO: not sure how this works yet
+  @NoDoc Event? _event
 
   private Func? cbAction := null
 }
