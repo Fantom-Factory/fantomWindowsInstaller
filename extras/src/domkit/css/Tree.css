@@ -41,6 +41,8 @@ div.domkit-Tree-node-expander {
 
 :focus div.domkit-sel div.domkit-Tree-node-expander { color: #fff }
 
+:focus div.domkit-Tree-node.domkit-sel.down { background: #2980b9 !important; }
+
 div.domkit-Tree-node-block.expanded > div.domkit-Tree-node div.domkit-Tree-node-expander {
   -webkit-transform: rotate(90deg);
 }
@@ -48,4 +50,6 @@ div.domkit-Tree-node-block.expanded > div.domkit-Tree-node div.domkit-Tree-node-
 div.domkit-Tree-node div:nth-child(2) {
   display: inline-block;
   width: calc(100% - 20px);
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

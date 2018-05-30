@@ -66,12 +66,28 @@ using dom
     return this
   }
 
+  ** The number of rows in this GridBox.
+  Int numRows() { tbody.children.size }
+
   ** Add a new row to grid.
   This addRow(Elem?[] cells, Int[] colspan := Int#.emptyList)
+  {
+    _addRow(null, cells, colspan)
+  }
+
+  ** Insert row before given index.
+  This insertRowBefore(Int index, Elem?[] cells, Int[] colspan := Int#.emptyList)
+  {
+    _addRow(index, cells, colspan)
+  }
+
+  ** Add a new row to grid.
+  private This _addRow(Int? at, Elem?[] cells, Int[] colspan := Int#.emptyList)
   {
     r  := tbody.children.size
     cx := 0
     tr := Elem("tr")
+
     cells.each |elem,c|
     {
       td := Elem("td")
@@ -82,13 +98,23 @@ using dom
       cx += cs==null ? 0 : cs-1
       tr.add(td)
     }
-    tbody.add(tr)
+
+    if (at == null) tbody.add(tr)
+    else tbody.insertBefore(tr, tbody.children[at])
+
     init = false
     return this
   }
 
-  ** The number of rows in this GridBox.
-  Int numRows() { tbody.children.size }
+  ** Return the row index that this child exists under, or
+  ** 'null' if child was not found in this GridBox.
+  Int? rowIndexOf(Elem child)
+  {
+    tbody.children.findIndex |row|
+    {
+      row.containsChild(child)
+    }
+  }
 
   ** Remove the row of cells at given index.
   This removeRow(Int index)

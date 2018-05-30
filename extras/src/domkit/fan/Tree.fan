@@ -167,6 +167,17 @@ using graphics
     refreshNode(node)
   }
 
+  ** Experimental hook to modify the node display state.
+  @NoDoc Void displayState(TreeNode node, Str? state)
+  {
+    // remove existing state
+    content := node.elem.querySelector(".domkit-Tree-node")
+    content.style.removeClass("down")
+
+    // add new state
+    if (state == "down") content.style.addClass("down")
+  }
+
   ** Selection for tree. Index based selection is not supported for Tree.
   Selection sel { private set }
 
@@ -284,23 +295,21 @@ using graphics
     if (elem == this) return
     node := toNode(elem)
 
-    // check expand/selection
-    if (e.type == "mouseup")
+    // check sel/expand
+    if (e.type == "mousedown")
     {
+      // update selection
+      if (!elem.style.hasClass("domkit-Tree-node-expander") && !sel.items.contains(node))
+      {
+        sel.item = node
+        cbSelect?.call(this)
+      }
+    }
+    else if (e.type == "mouseup")
+    {
+      // expand node
       if (elem.style.hasClass("domkit-Tree-node-expander"))
-      {
-        // expand node
         expand(node, !node.expanded)
-      }
-      else
-      {
-        // update selection
-        if (!sel.items.contains(node))
-        {
-          sel.item = node
-          cbSelect?.call(this)
-        }
-      }
     }
 
     // check action

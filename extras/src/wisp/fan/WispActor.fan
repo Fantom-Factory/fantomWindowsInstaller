@@ -129,9 +129,10 @@ internal const class WispActor : Actor
       // method
       req.method = method.upper
 
-      // uri; immediately reject any uri which starts with ..
+      // uri; immediately reject any uri which looks dangerous
       req.uri = Uri.decode(uri)
       if (req.uri.path.first == "..") throw Err("Reject URI")
+      if (req.uri.pathStr.contains("//")) throw Err("Reject URI")
 
       // version
       if (ver == "HTTP/1.1") req.version = ver11
@@ -170,11 +171,6 @@ internal const class WispActor : Actor
   {
     // init request input stream to read content
     req.webIn = initReqInStream(req)
-
-    // init response - set predefined headers
-    res.headers["Server"] = wispVer
-    res.headers["Date"] = DateTime.now.toHttpStr
-    res.headers["Connection"] = "close"
 
     // configure Locale.cur for best match based on request
     Locale.setCur(req.locales.first)

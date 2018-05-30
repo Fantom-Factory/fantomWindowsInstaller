@@ -292,7 +292,7 @@ public class LocalFile
   {
     try
     {
-      return new LocalFileStore(this.file);
+      return new LocalFileStore(java.nio.file.Files.getFileStore(this.file.toPath()));
     }
     catch (java.io.IOException e)
     {
@@ -417,17 +417,24 @@ public class LocalFile
 
   public void delete()
   {
-    if (!exists()) return;
-
-    if (file.isDirectory())
+    if (exists() && file.isDirectory())
     {
       List kids = list();
       for (int i=0; i<kids.sz(); ++i)
         ((File)kids.get(i)).delete();
     }
 
-    if (!file.delete())
-      throw IOErr.make("Cannot delete: " + file);
+    try
+    {
+      // java.io.File has some issues on macOS (and Linux?) with
+      // broken symlinks; and will report they do not exist; use
+      // Files.deleteIfExists to cleanup properly
+      java.nio.file.Files.deleteIfExists(file.toPath());
+    }
+    catch (java.io.IOException err)
+    {
+      throw IOErr.make("Cannot delete: " + file, err);
+    }
   }
 
   public File deleteOnExit()
