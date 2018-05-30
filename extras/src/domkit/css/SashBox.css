@@ -11,7 +11,4 @@ div.domkit-SashBox {
   position: relative;
 }
 
-div.domkit-SashBox-splitter {
-  position: absolute;
-  background: rgba(0, 0, 0, 0.2);
-}
+div.domkit-SashBox-div {}

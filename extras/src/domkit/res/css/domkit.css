@@ -37,6 +37,10 @@
 .domkit-control.readonly { background: #f8f8f8; }
 /* this disables hrefs links */
 a.domkit-control.disabled { pointer-events:none; }
+.domkit-resize-splitter {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.2);
+}
 .domkit-control-button {
   background: #fff;
   border: 1px solid #bbb;
@@ -386,10 +390,7 @@ div.domkit-SashBox {
   overflow: hidden;  /* required for dir=right */
   position: relative;
 }
-div.domkit-SashBox-splitter {
-  position: absolute;
-  background: rgba(0, 0, 0, 0.2);
-}
+div.domkit-SashBox-div {}
 
 div.domkit-ScrollBox {
   overflow: auto;
@@ -575,12 +576,15 @@ div.domkit-Tree-node-expander {
   text-align: center;
 }
 :focus div.domkit-sel div.domkit-Tree-node-expander { color: #fff }
+:focus div.domkit-Tree-node.domkit-sel.down { background: #2980b9 !important; }
 div.domkit-Tree-node-block.expanded > div.domkit-Tree-node div.domkit-Tree-node-expander {
   -webkit-transform: rotate(90deg);
 }
 div.domkit-Tree-node div:nth-child(2) {
   display: inline-block;
   width: calc(100% - 20px);
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 div.domkit-WellBox {

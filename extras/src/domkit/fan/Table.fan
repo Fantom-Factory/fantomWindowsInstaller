@@ -37,6 +37,7 @@ using graphics
     }
     this.onEvent("mousedown", false) |e| { onMouseEvent(e) }
     this.onEvent("mouseup",   false) |e| { onMouseEvent(e) }
+    this.onEvent("mousemove", false) |e| { onMouseEvent(e) }
     this.onEvent("dblclick",  false) |e| { onMouseEvent(e) }
     this.onEvent("keydown",   false) |e| { onKeyEvent(e) }
 
@@ -89,6 +90,7 @@ using graphics
   {
     pivot = null
     view.sort(col, dir)
+    model.onSort(col, dir)
     refresh
   }
 
@@ -229,10 +231,10 @@ using graphics
     numVisCols.times |c|
     {
       col  := firstVisCol + c
-      pos  := Point(col, row)
+      pos  := TablePos(col, row)
       cell := cells[pos]
       if (cell == null) return
-      refreshCell(cell, pos.x.toInt, pos.y.toInt)
+      refreshCell(cell, pos.col, pos.row)
     }
   }
 
@@ -240,7 +242,7 @@ using graphics
   private Void refreshCell(Elem? cell, Int col, Int row)
   {
     // get cell
-    cell = cell ?: cells[Point(col, row)]
+    cell = cell ?: cells[TablePos(col, row)]
     if (cell == null) throw Err("Cell not found: $col,$row")
 
     // update static view style
@@ -284,7 +286,7 @@ using graphics
 
     // get container dims
     tbodysz := this.size
-    this.theadh  = showHeader ? 20 : 0
+    this.theadh  = showHeader ? view.headerHeight : 0
     this.tbodyw  = tbodysz.w.toInt
     this.tbodyh  = tbodysz.h.toInt - theadh
 
@@ -294,7 +296,7 @@ using graphics
     this.colw.clear
     this.numCols.times |c|
     {
-      cw := view.colWidth(c)
+      cw := ucolw[c] ?: view.colWidth(c)
       if (c == numCols-1 && hasHpbut) cw += hpbutw + 4
       this.colx.add(cx)
       this.colw.add(cw)
@@ -423,7 +425,7 @@ using graphics
           it.focused  = manFocus
           it.selected = rowSel
         }
-        cells[Point(c, r)] = cell
+        cells[TablePos(c, r)] = cell
         if (c < numCols && r < numRows) view.onCell(cell, c, r, flags)
         tbody.add(cell)
       }
@@ -635,8 +637,8 @@ using graphics
       h.style->transform = "translate(${tx}px, 0)"
     }
     cells.each |c,p| {
-      tx := colxSafe(p.x.toInt) - scrollx
-      ty := (p.y * rowh) - scrolly
+      tx := colxSafe(p.col) - scrollx
+      ty := (p.row * rowh) - scrolly
       c.style->transform = "translate(${tx}px, ${ty}px)"
     }
   }
@@ -676,10 +678,10 @@ using graphics
       numVisRows.times |r|
       {
         row  := r + firstVisRow
-        op   := Point(oldCol, row)
+        op   := TablePos(oldCol, row)
         cell := cells.remove(op)
         cell.style->width = newColw
-        cells[Point(newCol, row)] = cell
+        cells[TablePos(newCol, row)] = cell
         refreshCell(cell, newCol, row)
       }
     }
@@ -716,9 +718,9 @@ using graphics
       numVisCols.times |c|
       {
         col  := c + firstVisCol
-        op   := Point(col, oldRow)
+        op   := TablePos(col, oldRow)
         cell := cells.remove(op)
-        cells[Point(col, newRow)] = cell
+        cells[TablePos(col, newRow)] = cell
         refreshCell(cell, col, newRow)
       }
     }
@@ -795,16 +797,64 @@ using graphics
     p  := this.relPos(e.pagePos)
     mx := p.x.toInt + scrollx
     my := p.y.toInt + scrolly - theadh
+    this.style->cursor = null
 
     if (mx > colx.last + colw.last) return
     col := colx.binarySearch(mx)
     if (col < 0) col = col.not - 1
 
+    cx := mx - colx[col]
+    canResize := (col > 0 && cx < 5) || (col < numCols-1 && colw[col]-cx < 5)
+
     if (p.y.toInt < theadh)
     {
-      if (e.type == "mousedown")
+      if (e.type == "mousemove")
       {
-        if (hasHpbut && p.x.toInt > tbodyw-hpbutw)
+        if (canResize) this.style->cursor = "col-resize"
+      }
+      else if (e.type == "mousedown")
+      {
+        if (canResize)
+        {
+          this.resizeCol = cx < 5 ? col-1 : col
+          this.style->cursor = "col-resize"
+          this.add(resizeElem = Elem { it.style.addClass("domkit-resize-splitter") }
+          {
+            it.style->left = "${p.x-2}px"
+            it.style->width  = "5px"
+            it.style->height = "100%"
+          })
+
+          doc := Win.cur.doc
+          Obj? fmove
+          Obj? fup
+
+          fmove = doc.onEvent("mousemove", true) |de| {
+            de.stop
+            dex := this.relPos(de.pagePos).x.toInt
+            resizeElem.style->left = "${dex-2}px"
+          }
+
+          fup = doc.onEvent("mouseup", true) |de| {
+            // register user colw and cache scroll pos
+            demx := this.relPos(de.pagePos).x.toInt + scrollx
+            ucolw[resizeCol] = 20.max(demx - colx[resizeCol])
+            oldscroll := Point(scrollx, scrolly)
+
+            // remove splitter
+            this.remove(resizeElem)
+            resizeElem = null
+
+            // rebuild table and restore scrollpos
+            doRebuild
+            onScroll(oldscroll)
+
+            de.stop
+            doc.removeEvent("mousemove", true, fmove)
+            doc.removeEvent("mouseup",   true, fup)
+          }
+        }
+        else if (hasHpbut && p.x.toInt > tbodyw-hpbutw)
         {
           // header popup
           Popup hp := cbHeaderPopup.call(this)
@@ -824,12 +874,13 @@ using graphics
       row := my / rowh
       if (row >= numRows) return
 
-      // find pos relative to cell
-      cx := mx - colx[col]
+      // find pos relative to cell (cx calc above)
       cy := my - (row * rowh)
 
       // map to model rows
+      vcol := col
       vrow := row
+      col = view.colViewToModel(col)
       row = view.rowViewToModel(row)
 
       // check selection
@@ -848,7 +899,8 @@ using graphics
           it.row     = row
           it.pagePos = e.pagePos
           it.cellPos = Point(cx, cy)
-          it.size    = Size(colw[col], rowh)
+          it.size    = Size(colw[vcol], rowh)
+          it._event  = e
         })
       }
     }
@@ -1030,40 +1082,45 @@ using graphics
   private Elem? hbar
   private Elem? vbar
   private Int:Elem headers := [:]
-  private Point:Elem cells := [:]
-  private Int theadh         // thead height
-  private Int tbodyw         // tbody width
-  private Int tbodyh         // tbody height
-  private Int numCols        // num cols in model
-  private Int numRows        // num rows in model
-  private Int[] colx := [,]  // col x offsets
-  private Int[] colw := [,]  // col widths
-  private Int rowh           // row height
-  private Int numVisCols     // num of visible cols
-  private Int numVisRows     // num of visible rows
-  private Int maxScrollx     // max scroll x value
-  private Int maxScrolly     // max scroll y value
-  private Bool hasScrollx    // is horiz scolling
-  private Bool hasScrolly    // is vert scolling
-  private Int htrackw        // hbar track width
-  private Int hthumbw        // hbar thumb width
-  private Int vtrackh        // vbar track height
-  private Int vthumbh        // vbar thumb height
+  private TablePos:Elem cells := [:]
+  private Int theadh            // thead height
+  private Int tbodyw            // tbody width
+  private Int tbodyh            // tbody height
+  private Int numCols           // num cols in model
+  private Int numRows           // num rows in model
+  private Int[] colx := [,]     // col x offsets
+  private Int[] colw := [,]     // col widths
+  private Int:Int ucolw := [:]  // user defined col width (via resize)
+  private Int rowh              // row height
+  private Int numVisCols        // num of visible cols
+  private Int numVisRows        // num of visible rows
+  private Int maxScrollx        // max scroll x value
+  private Int maxScrolly        // max scroll y value
+  private Bool hasScrollx       // is horiz scolling
+  private Bool hasScrolly       // is vert scolling
+  private Int htrackw           // hbar track width
+  private Int hthumbw           // hbar thumb width
+  private Int vtrackh           // vbar track height
+  private Int vthumbh           // vbar thumb height
+
+  // resize
+  private Int? resizeCol        // column being resized
+  private Elem? resizeElem      // visual indication of resize col size
 
   // headerPopup
-  private Elem? hpbut        // header popup button
-  private Bool hasHpbut      // hpbut != null
+  private Elem? hpbut             // header popup button
+  private Bool hasHpbut           // hpbut != null
   private const Int hpbutw := 22  // width of header popup button
 
   // scroll
-  private Int scrollx        // current x scroll pos
-  private Int scrolly        // current y scroll pos
-  private Int? hbarPulseId   // hbar pulse timeout func id
-  private Int? vbarPulseId   // vbar pulse timeout func id
-  private Int? hbarPageId    // hbar page interval func id
-  private Int? vbarPageId    // vbar page interval func id
-  private Int? hthumbDragOff // offset of hthumb drag pos
-  private Int? vthumbDragOff // offset of vthumb drag pos
+  private Int scrollx           // current x scroll pos
+  private Int scrolly           // current y scroll pos
+  private Int? hbarPulseId      // hbar pulse timeout func id
+  private Int? vbarPulseId      // vbar pulse timeout func id
+  private Int? hbarPageId       // hbar page interval func id
+  private Int? vbarPageId       // vbar page interval func id
+  private Int? hthumbDragOff    // offset of hthumb drag pos
+  private Int? vthumbDragOff    // offset of vthumb drag pos
 
   // update
   private Int firstVisCol    // first visible col
@@ -1074,6 +1131,24 @@ using graphics
 
   // focus/blur
   private Bool manFocus := false
+}
+
+**************************************************************************
+** TablePos
+**************************************************************************
+
+**
+** TablePos provides an JS optimized hash key for col,row cell position
+**
+@Js
+internal const class TablePos
+{
+  new make(Int c, Int r) { col = c; row = r; toStr = "$c,$r"; hash = toStr.hash }
+  const Int col
+  const Int row
+  const override Int hash
+  const override Str toStr
+  override Bool equals(Obj? that) { toStr == that.toStr }
 }
 
 **************************************************************************
@@ -1090,6 +1165,9 @@ using graphics
 
   ** Number of rows in table.
   virtual Int numRows() { 0 }
+
+  ** Return height of header.
+  virtual Int headerHeight() { 20 }
 
   ** Return width of given column.
   virtual Int colWidth(Int col) { 100 }
@@ -1119,6 +1197,9 @@ using graphics
   ** 0, or 1 according to the same semanatics as `sys::Obj.compare`.
   ** See `domkit::Table.sort`.
   virtual Int sortCompare(Int col, Int row1, Int row2) { 0 }
+
+  ** Callback when table is resorted
+  @NoDoc virtual Void onSort(Int? col, Dir dir) {}
 }
 
 **************************************************************************
@@ -1128,6 +1209,9 @@ using graphics
 ** Table specific flags for eventing
 @Js const class TableFlags
 {
+  ** Default value with all flags cleared
+  static const TableFlags defVal := make {}
+
   new make(|This| f) { f(this) }
 
   ** Table has focus.
@@ -1176,6 +1260,9 @@ using graphics
 
   ** Size of cell for this event.
   const Size size
+
+  // TODO: not sure how this works yet
+  @NoDoc Event? _event
 
   override Str toStr()
   {
@@ -1235,6 +1322,7 @@ using graphics
 
   override Int numCols() { cols.size }
   override Int numRows() { rows.size }
+  override Int headerHeight() { table.model.headerHeight }
   override Int colWidth(Int c) { table.model.colWidth(cols[c]) }
   override Int rowHeight() { table.model.rowHeight }
   override Obj item(Int r) { table.model.item(rows[r]) }

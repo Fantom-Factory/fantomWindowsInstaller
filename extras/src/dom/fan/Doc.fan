@@ -109,7 +109,7 @@ class Doc
   **   - 'name': the command name to execute
   **   - 'defUi': flag to indicate if default user interface is shown
   **   - 'val': optional value for commands that take an argument
-  native Bool exec(Str name, Bool defUi := true, Obj? val := null)
+  native Bool exec(Str name, Bool defUi := false, Obj? val := null)
 
 //////////////////////////////////////////////////////////////////////////
 // Writing
@@ -142,12 +142,8 @@ class Doc
   **
   ** Add a cookie to this session.
   **
-  Void addCookie(Cookie c)
-  {
-    addCookieStr(c.toStr)
-  }
+  native Void addCookie(Cookie c)
 
   private native Str getCookiesStr()
-  private native Str addCookieStr(Str c)
 
 }
