@@ -57,7 +57,7 @@ using dom
   {
     if (isCombo) return
     this.removeAll
-    if (items.size == 0) this.add(Elem { it.text = "\u200b" })
+    if (items.size == 0 || sel.item == null) this.add(Elem { it.text = "\u200b" })
     else this.add(makeElem(sel.item))
   }
 
@@ -119,7 +119,7 @@ using dom
   new make(ListButton button) { this.button = button }
   override Int max() { button.items.size }
   override Obj toItem(Int index) { button.items[index] }
-  override Int? toIndex(Obj item) { button.items.findIndex(item) }
+  override Int? toIndex(Obj item) { button.items.findIndex |i| { i == item }}
   override Void onUpdate(Int[] oldIndexes, Int[] newIndexes) { button.update }
   private ListButton button
 }
