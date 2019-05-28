@@ -6,6 +6,29 @@
 ** license:    Licensed under the Academic Free License version 3.0
 **************************************************************************
 
+*Build 1.0.73 (21 May 2019)*
+- WebReq isGet, isPost conveniences
+- PathFile Java implementation
+- Prep for JDK 9 support
+
+*Build 1.0.72 (14 Mar 2019)*
+- fanr: Eggbox is now the default fanr repo
+- Rework Java Buf APIs
+- dom: fix DomCoord to be 'const'
+- dom: add Win.log
+- domkit: fix Tree.onAction to not fire on expanders
+- domkit: fix SashBox bug where nested resizable SashBoxs could throw NPE
+- domkit: fix SashBox Float.toLocale to use Locale.en to force . decimal
+- Date yesterday, tomorrow
+- List.containsSame
+- ext2mime: Add otf,ttf,woff,woff2
+- web: default SameSite attribute to "strict" on all cookies
+- #2711: FEP 1: 'fan build' command line tool
+- #2724: Float.toLocale()
+- #2726: Serialising Nested Maps
+- #2730: BugFixes for domkit::ListButton
+- #2739: Lists of Lists
+
 *Build 1.0.71 (29 May 2018)*
 - List.flatMap
 - concurrent: add ConcurrentMap
