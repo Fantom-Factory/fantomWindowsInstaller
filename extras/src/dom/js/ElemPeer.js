@@ -85,7 +85,12 @@ fan.dom.ElemPeer.prototype.style = function(self)
     this.$style = fan.dom.Style.make();
     this.$style.peer.elem  = this.elem;
     this.$style.peer.style = this.elem.style;
+
+    // polyfill for IE11/Edge with SVG nodes
+    if (this.$svg && !this.elem.classList)
+      this.elem.classList = new fan.dom.StylePeer.polyfillClassList(this.elem);
   }
+
   return this.$style;
 }
 
@@ -288,6 +293,11 @@ fan.dom.ElemPeer.prototype.scrollSize = function(self)
   return this.m_scrollSize;
 }
 
+fan.dom.ElemPeer.prototype.scrollIntoView = function(self, alignToTop)
+{
+  this.elem.scrollIntoView(alignToTop);
+}
+
 //////////////////////////////////////////////////////////////////////////
 // Tree
 //////////////////////////////////////////////////////////////////////////
@@ -452,7 +462,7 @@ fan.dom.ElemPeer.prototype.onEvent = function(self, type, useCapture, handler)
 fan.dom.ElemPeer.prototype.removeEvent = function(self, type, useCapture, handler)
 {
   if (handler.$func)
-    this.elem.removeEventListener(type, handler, useCapture);
+    this.elem.removeEventListener(type, handler.$func, useCapture);
 }
 
 fan.dom.ElemPeer.prototype.toStr = function(self)
