@@ -1,4 +1,4 @@
-# Fantom v1.0.71 for Windows
+# Fantom v1.0.74 for Windows
 ---
 [![Written for: Fantom](http://img.shields.io/badge/written%20for-Fantom-lightgray.svg)](http://fantom-lang.org/)
 [![Licence: ISC](http://img.shields.io/badge/licence-ISC-blue.svg)](https://choosealicense.com/licenses/isc/)
@@ -7,21 +7,21 @@
 
 ## Overview
 
-Download the latest installer on the [Downloads Page](https://bitbucket.org/fantomfactory/fantom-windows-installer/downloads).
+Download the latest installer on the [Releases Page](/Fantom-Factory/fantomWindowsInstaller/releases).
 
 This is a Windows installer for the [Fantom](http://fantom-lang.org/) Programming Language. 
 
-It installs Fantom 1.0.71, compete with SWT for 64 bit platforms, and sets all required environment variables.
+It installs Fantom 1.0.74, compete with SWT for 64 bit platforms, and sets all required environment variables.
 
-Issues related to this installer may be reported on the [issues page](https://bitbucket.org/fantomfactory/fantom-windows-installer/issues?status=new&status=open).
+Issues related to this installer may be reported on the [issues page](/Fantom-Factory/fantomWindowsInstaller/issues).
 
-![Installer Screenshot](https://bytebucket.org/fantomfactory/fantom-windows-installer/raw/tip/etc/screenshot.png)
+![Installer Screenshot](etc/screenshot.png)
 
 
 
 ## The Installer
 
-The installer contains the standard Fantom distribution as available [here](https://bitbucket.org/fantom/fan-1.0/downloads/) and unpacks it into the selected directory.
+The installer contains the standard Fantom distribution as available [here](https://github.com/fantom-lang/fantom/releases) and unpacks it into the selected directory.
 
 The installer then sets and updates the `FAN_HOME` and `PATH` environment variables. If Fantom is installed for *"Just Me"* then the user's environment variables are set. If installed for *"All Users"* then the System environment variables are updated.
 
@@ -53,7 +53,7 @@ See [Path Env](http://fantom.org/doc/docLang/Env#PathEnv) for details.
 
 ## Pre-Requisites
 
-The installer assumes the system already has Java installed. JRE 1.7 or later is required to run Fantom programs.
+The installer assumes the system already has Java installed. JRE 1.8 or later is required to run Fantom programs.
 
 
 
