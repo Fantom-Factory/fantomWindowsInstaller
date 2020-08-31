@@ -7,7 +7,7 @@
 
 ## Overview
 
-Download the latest installer on the [Releases Page](/releases/latest).
+Download the latest installer on the [Releases Page](/Fantom-Factory/fantomWindowsInstaller/releases/latest).
 
 This is a Windows installer for the [Fantom Programming Language](https://fantom.org/). 
 
