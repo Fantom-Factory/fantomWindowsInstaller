@@ -1,4 +1,4 @@
-# Fantom v1.0.74 for Windows
+# Fantom v1.0.75 for Windows
 ---
 [![Written for: Fantom](http://img.shields.io/badge/written%20for-Fantom-lightgray.svg)](http://fantom-lang.org/)
 [![Licence: ISC](http://img.shields.io/badge/licence-ISC-blue.svg)](https://choosealicense.com/licenses/isc/)
@@ -7,13 +7,11 @@
 
 ## Overview
 
-Download the latest installer on the [Releases Page](/Fantom-Factory/fantomWindowsInstaller/releases).
+Download the latest installer on the [Releases Page](/releases/latest).
 
-This is a Windows installer for the [Fantom](http://fantom-lang.org/) Programming Language. 
+This is a Windows installer for the [Fantom Programming Language](https://fantom.org/). 
 
-It installs Fantom 1.0.74, compete with SWT for 64 bit platforms, and sets all required environment variables.
-
-Issues related to this installer may be reported on the [issues page](/Fantom-Factory/fantomWindowsInstaller/issues).
+It installs Fantom 1.0.75, compete with SWT for 64 bit platforms, and sets all required environment variables.
 
 ![Installer Screenshot](etc/screenshot.png)
 
@@ -34,7 +32,7 @@ This distribution differs slightly from the *official* distribution as this down
 `etc/sys/config.props` has also been altered slighly:
 
  - `errTraceMaxDepth` has been increased from 25 to 50 to give longer stack traces
- - `debug` has been set to `true` to enable JVM debugging in IDE's like [F4](http://www.xored.com/products/f4/)
+ - `debug` has been set to `true` to enable JVM debugging in IDE's like [F4](https://github.com/xored/f4)
 
 Also, this download doesn't contain those annoying `.DS_Store` junk files for MacOS!
 
