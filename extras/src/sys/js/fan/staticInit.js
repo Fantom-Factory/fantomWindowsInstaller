@@ -30,7 +30,9 @@ fan.sys.Int.m_minVal = -Math.pow(2, 53)
 fan.sys.Int.m_defVal = 0;
 fan.sys.Int.Chunk  = 4096;
 
+//
 // Float
+//
 fan.sys.Float.m_posInf = fan.sys.Float.make(Number.POSITIVE_INFINITY);
 fan.sys.Float.m_negInf = fan.sys.Float.make(Number.NEGATIVE_INFINITY);
 fan.sys.Float.m_nan    = fan.sys.Float.make(Number.NaN);
@@ -99,7 +101,6 @@ fan.sys.OutStream.m_xmlEscUnicode  = 0x04;
 //
 fan.sys.Uri.parentRange = fan.sys.Range.make(0, -2, false);
 fan.sys.Uri.m_defVal = fan.sys.Uri.fromStr("");
-fan.sys.UriPodBase = "/pod/"; // TODO
 
 //
 // Locale
@@ -192,39 +193,8 @@ fan.sys.Weekday.m_vals = fan.sys.List.make(fan.sys.Weekday.$type,
 //
 // TimeZone
 //
-// Etc/UTC
-tz = new fan.sys.TimeZone();
-tz.m_name = "UTC";
-tz.m_fullName = "Etc/UTC";
-tz.m_rules = [];
-rule = new fan.sys.TimeZone$Rule();
- rule.startYear = 1995;
- rule.offset = 0;
- rule.stdAbbr = "UTC";
- rule.dstOffset = 0;
- tz.m_rules.push(rule);
-fan.sys.TimeZone.cache["UTC"] = tz;
-fan.sys.TimeZone.cache["Etc/UTC"] = tz;
-fan.sys.TimeZone.names.push("UTC");
-fan.sys.TimeZone.fullNames.push("Etc/UTC");
-fan.sys.TimeZone.m_utc = tz;
-
-// Etc/Rel
-tz = new fan.sys.TimeZone();
-tz.m_name = "Rel";
-tz.m_fullName = "Etc/Rel";
-tz.m_rules = [];
-rule = new fan.sys.TimeZone$Rule();
- rule.startYear = 1995;
- rule.offset = 0;
- rule.stdAbbr = "Rel";
- rule.dstOffset = 0;
- tz.m_rules.push(rule);
-fan.sys.TimeZone.cache["Rel"] = tz;
-fan.sys.TimeZone.cache["Etc/Rel"] = tz;
-fan.sys.TimeZone.names.push("Rel");
-fan.sys.TimeZone.fullNames.push("Etc/Rel");
-fan.sys.TimeZone.m_rel = tz;
+fan.sys.TimeZone.m_utc = fan.sys.TimeZone.fromStr("UTC");
+fan.sys.TimeZone.m_rel = fan.sys.TimeZone.fromStr("Rel");
 
 //
 // DateTime
@@ -233,6 +203,7 @@ fan.sys.Time.m_defVal = new fan.sys.Time(0, 0, 0, 0);
 fan.sys.Date.m_defVal = new fan.sys.Date(2000, 0, 1);
 fan.sys.DateTime.m_defVal = fan.sys.DateTime.make(
   2000, fan.sys.Month.m_jan, 1, 0, 0, 0, 0, fan.sys.TimeZone.utc());
+fan.sys.DateTime.m_boot = fan.sys.DateTime.now();
 
 //
 // Regex
