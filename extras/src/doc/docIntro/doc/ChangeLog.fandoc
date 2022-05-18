@@ -6,6 +6,18 @@
 ** license:    Licensed under the Academic Free License version 3.0
 **************************************************************************
 
+*Build 1.0.78 (26 Apr 2022)*
+- New graphics APIs: GraphicsEnv, Graphics, Image, Stroke, Paint
+- Canvas rendering via Elem.renderCanvas
+- New Java2D graphics implementation
+- Deprecate Font.metrics & DeviceContext in favor of Graphics.metrics
+- Deprecate Int/Float clip in favor of clamp
+- Duration.clamp
+- Str.eachWhile
+- WebOutStream.main
+- ConcurrentMap.getAndSet
+- dom: ResizeObserver
+
 *Build 1.0.77 (2 Sep 2021)*
 - Distribution zip now shipped without tests
 - List groupBy, groupByInto
@@ -17,6 +29,7 @@
 - js: New formal Env.var initialization design for JS
 - js: TimeZone.cur now defaults to Env.var or queries browser for best match
 - js: Locale.cur can now be defaulted via Env.var
+- New asn1 pod
 - New crypto pod
 - New SocketConfig and TLS support in inet
 - #2652: List.groupBy()

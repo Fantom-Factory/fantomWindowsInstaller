@@ -12,7 +12,7 @@
 **
 @Js
 @Serializable { simple = true }
-const class Color
+const final class Color : Paint
 {
 
 //////////////////////////////////////////////////////////////////////////
@@ -21,6 +21,12 @@ const class Color
 
   ** Transparent constant with opacity set to zero
   const static Color transparent := make(0, 0f)
+
+  ** Black is #000
+  const static Color black := make(0, 1.0f)
+
+  ** White is #FFF
+  const static Color white := make(0xFFFFFF, 1.0f)
 
   ** Make a new instance with the RGB components masked
   ** together: bits 16-23 red; bits 8-15 green; bits 0-7 blue.
@@ -315,6 +321,16 @@ const class Color
   }
 
 //////////////////////////////////////////////////////////////////////////
+// Paint
+//////////////////////////////////////////////////////////////////////////
+
+  ** Always return true
+  override Bool isColorPaint() { true }
+
+  ** Return this
+  override Color asColorPaint() { this }
+
+//////////////////////////////////////////////////////////////////////////
 // Utils
 //////////////////////////////////////////////////////////////////////////
 
@@ -399,6 +415,8 @@ const class Color
 //////////////////////////////////////////////////////////////////////////
 // Predefined
 //////////////////////////////////////////////////////////////////////////
+
+  @NoDoc static Str[] keywords() { byKeyword.keys }
 
   private static const Str:Color byKeyword
   static

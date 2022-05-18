@@ -6,13 +6,15 @@
 //   15 Jun 2017  Matthew Giannini  Creation
 //
 
+using graphics
+
 **
-** Decodes a JPEG file into an `Image`.
+** Decodes a JPEG file into a ServerImage.
 **
 ** Only the SOF frame is currently decoded. This frame contains the necessary
 ** information to construct the Image.
 **
-@NoDoc @Js class JpegDecoder
+internal class JpegDecoder
 {
 
 //////////////////////////////////////////////////////////////////////////
@@ -21,8 +23,9 @@
 
   ** Create a JPEG decoder for the given stream. The stream will
   ** not be closed after decoding.
-  new make(InStream in)
+  new make(Uri uri, InStream in)
   {
+    this.uri = uri
     this.in = in
   }
 
@@ -33,9 +36,6 @@
   ** JPEG magic number
   static const Int magic := 0xff_d8
 
-  ** JPEG mime type
-  static const MimeType mime := MimeType("image/jpeg")
-
   ** Returns true if Buf starts with `magic` number.
   ** The buf is not modified.
   static Bool isJpeg(Buf buf) { magic == buf[0..<2].readU2() }
@@ -45,7 +45,7 @@
 //////////////////////////////////////////////////////////////////////////
 
   ** Decode the Image. Throws IOErr if the JPEG is not properly formatted.
-  Image decode()
+  ServerImage decode()
   {
     // verify magic
     if (magic != in.readU2()) throw IOErr("Missing SOI")
@@ -80,7 +80,7 @@
   }
 
   ** Read SOF frame.
-  private Image readSof()
+  private ServerImage readSof()
   {
     // Image properties
     Str:Obj props := Str:Obj[:]
@@ -102,8 +102,9 @@
     props["colorSpace"]     = toColorSpace(numComps)
     props["colorSpaceBits"] = bitsPerSample
 
-    return Image {
-      it.mime  = JpegDecoder.mime
+    return ServerImage {
+      it.uri   = this.uri
+      it.mime  = Image.mimeJpeg
       it.size  = size
       it.props = props.toImmutable
     }
@@ -182,6 +183,7 @@
 // Fields
 //////////////////////////////////////////////////////////////////////////
 
+  private const Uri uri
   private InStream in
   private Bool isJFIF := false
 }
