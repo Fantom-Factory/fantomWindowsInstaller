@@ -6,6 +6,8 @@
 //   9 Feb 07  Brian Frank  Creation
 //
 
+using crypto
+
 **
 ** TcpSocket manages a TCP/IP endpoint.
 **
@@ -109,9 +111,10 @@ class TcpSocket
   native This connect(IpAddr addr, Int port, Duration? timeout := config.connectTimeout)
 
   **
-  ** Get a new TCP socket that is upgrade to use TLS.
+  ** Get a new TCP socket that is upgraded to use TLS.  If connecting
+  ** through a web proxy, specify the destination address and port.
   **
-  native TcpSocket upgradeTls()
+  native TcpSocket upgradeTls(IpAddr? addr := null, Int? port := null)
 
   **
   ** Get the input stream used to read data from the socket.  The input
@@ -147,6 +150,30 @@ class TcpSocket
   ** sequence.  Raise IOErr if error occurs.
   **
   native Void shutdownOut()
+
+//////////////////////////////////////////////////////////////////////////
+// Certificates
+//////////////////////////////////////////////////////////////////////////
+
+  **
+  ** Returns the socket client certificate authentication configuration
+  **
+  @NoDoc native Str clientAuth()
+
+  **
+  ** Returns the certificate(s) that were sent to the remote host during handshake
+  **
+  @NoDoc native Cert[] localCerts()
+
+  **
+  ** Returns the certificate(s) that were sent by the remote host during handshake
+  ** with the remote host's own certificate first followed by any certificate
+  ** authorities
+  **
+  ** Note: The returned value may not be a valid certificate chain and should
+  ** not be relied on for trust decisions.
+  **
+  @NoDoc native Cert[] remoteCerts()
 
 //////////////////////////////////////////////////////////////////////////
 // Socket Options

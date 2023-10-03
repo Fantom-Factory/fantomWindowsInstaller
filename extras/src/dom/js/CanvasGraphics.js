@@ -23,7 +23,12 @@ fan.dom.CanvasGraphics.render = function(canvas, cb)
 {
   var cx = canvas.peer.elem.getContext("2d");
   var g = new fan.dom.CanvasGraphics();
-  cx.translate(0.5, 0.5);  // avoid blurry lines
+  if (!canvas.peer.m_inited)
+  {
+    // first time thru scale by half a pixel to avoid blurry lines
+    canvas.peer.m_inited = true;
+    cx.translate(0.5, 0.5);
+  }
   g.cx = cx;
   cb.call(g);
 }
@@ -39,13 +44,8 @@ fan.dom.CanvasGraphics.prototype.paint$ = function(x)
 }
 
 // Color color
-fan.dom.CanvasGraphics.prototype.m_color = fan.graphics.Color.m_black;
-fan.dom.CanvasGraphics.prototype.color  = function() { return this.m_color }
-fan.dom.CanvasGraphics.prototype.color$ = function(x)
-{
-  this.m_color = x;
-  this.paint$(x);
-}
+fan.dom.CanvasGraphics.prototype.color  = function() { return this.m_paint.asColorPaint(); }
+fan.dom.CanvasGraphics.prototype.color$ = function(x) { this.paint$(x); }
 
 // Stroke stroke
 fan.dom.CanvasGraphics.prototype.m_stroke = fan.graphics.Stroke.m_defVal;
@@ -79,6 +79,7 @@ fan.dom.CanvasGraphics.prototype.m_font = null
 fan.dom.CanvasGraphics.prototype.font   = function() { return this.m_font }
 fan.dom.CanvasGraphics.prototype.font$  = function(x)
 {
+  if (this.m_font === x) return;
   this.m_font = x;
   this.cx.font = x.toStr();
 }
@@ -125,6 +126,7 @@ fan.dom.CanvasGraphics.prototype.fillRect = function(x, y, w, h)
 // This clipRect(Float x, Float y, Float w, Float h)
 fan.dom.CanvasGraphics.prototype.clipRect = function(x, y, w, h)
 {
+  this.cx.beginPath();
   this.cx.rect(x, y, w, h)
   this.cx.clip();
   return this;
@@ -206,6 +208,7 @@ fan.dom.CanvasGraphics.prototype.push = function (r)
   this.cx.save();
   if (r !== undefined)
   {
+    this.cx.beginPath();
     this.cx.translate(r.m_x, r.m_y);
     this.cx.rect(0, 0, r.m_w, r.m_h);
     this.cx.clip();

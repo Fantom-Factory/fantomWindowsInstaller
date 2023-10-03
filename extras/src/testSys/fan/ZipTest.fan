@@ -108,6 +108,22 @@ class ZipTest : Test
       verify([`/foo.txt`, `/path/bar.hex`].contains(entry.uri))
       verify(entry.readAllBuf.size >= 8)
     }
+
+    // readEach
+    t := Uri[,]
+    z = Zip.read(buf.seek(0).in)
+    z.readEach |e| { t.add(e.uri) }
+    verifyEq(t.size, 2)
+    verifyEq(t[0], `/foo.txt`)
+    verifyEq(t[1], `/path/bar.hex`)
+
+    // unzipInto
+    unzipDir := tempDir + `test-unzip/`
+    count := Zip.unzipInto(f, unzipDir)
+    verifyEq(count, 2)
+    verifyEq(unzipDir.plus(`foo.txt`).modified, fooModified)
+    verifyEq(unzipDir.plus(`foo.txt`).readAllStr, "hello zip!\n")
+    verifyEq(unzipDir.plus(`path/bar.hex`).readAllBuf.in.readS8, 0xabcd_0123_0000_ffff)
   }
 
   Void write(Zip z)
@@ -117,7 +133,7 @@ class ZipTest : Test
     verify(z.contents == null)
 
     // file 1
-    out := z.writeNext(`/foo.txt`)
+    out := z.writeNext(`/foo.txt`, fooModified)
     out.printLine("hello zip!")
     out.close
 
@@ -132,6 +148,8 @@ class ZipTest : Test
     verifyErr(ArgErr#) { z.writeNext(`/file.txt?query`) }
   }
 
+  const DateTime fooModified := DateTime.fromStr("2022-11-18T10:00:00-05:00 New_York")
+
   Void read(Zip z)
   {
     // open for writing
@@ -143,8 +161,8 @@ class ZipTest : Test
     verifyEq(f.uri, `/foo.txt`)
     verifyEq(f.parent, null)
     verifyEq(f.osPath, null)
-    if (f.size != null) verifyEq(f.size, 11); // doesn't work conistently in Java
-    verify(start + -2sec <= f.modified && f.modified <= DateTime.now + 2sec)
+    if (f.size != null) verifyEq(f.size, 11) // doesn't work consistently in Java
+    verifyEq(f.modified, fooModified)
     verifyEq(f.readAllStr, "hello zip!\n")
 
     // file 2

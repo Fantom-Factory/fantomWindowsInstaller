@@ -104,6 +104,11 @@ public abstract class Env
 // Resolution
 //////////////////////////////////////////////////////////////////////////
 
+  public List path()
+  {
+    return (List)List.make(Sys.FileType, new File[] { homeDir() }).toImmutable();
+  }
+
   public File findFile(Uri uri) { return findFile(uri, true); }
   public File findFile(Uri uri, boolean checked)
   {
@@ -179,7 +184,7 @@ public abstract class Env
   public String config(Pod pod, String key) { return config(pod, key, null); }
   public String config(Pod pod, String key, String def)
   {
-    return (String)props.get(pod, configProps, Duration.oneMin).get(key, def);
+    return (String)props(pod, configProps, Duration.oneMin).get(key, def);
   }
 
   public String locale(Pod pod, String key) { return locale(pod, key, noDef, Locale.cur()); }

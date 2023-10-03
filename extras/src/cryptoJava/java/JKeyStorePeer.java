@@ -168,7 +168,6 @@ public class JKeyStorePeer
       ks.load(null, pwd);
 
       // fill the store
-      String[] aliases = (String[])self.aliases().asArray(String.class);
       self.entries.each(new Func.Indirect2() {
         public Object call(Object a, Object b)
         {
@@ -180,7 +179,7 @@ public class JKeyStorePeer
             {
               // create java private key
               final JPrivKeyEntry privKeyEntry = (JPrivKeyEntry)entry;
-              final JPrivKey privKey = (JPrivKey)JPrivKey.decode(privKeyEntry.priv.encoded());
+              final JPrivKey privKey = (JPrivKey)JPrivKey.decode(privKeyEntry.priv.encoded(), privKeyEntry.priv.algorithm());
 
               // create java certificate chain
               Cert[] chain = (Cert[])privKeyEntry.certChain.asArray(Cert.class);

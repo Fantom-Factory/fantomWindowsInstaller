@@ -34,10 +34,11 @@ class Java2DGraphics : Graphics
     g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY)
     g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
     g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_LCD_HRGB)
+    this.paint = Color.black
   }
 
   ** Current paint defines how text and shapes are stroked and filled
-  override Paint paint := Color.black
+  override Paint paint := Color.transparent // set in make
   {
     set
     {
@@ -53,13 +54,10 @@ class Java2DGraphics : Graphics
 
   ** Convenience for setting paint to a solid color.  If the paint
   ** is currently not a solid color, then get returns the last color set.
-  override Color color := Color.black
+  override Color color
   {
-    set
-    {
-      &color = it
-      this.paint = it
-    }
+    get { paint.asColorPaint }
+    set { this.paint = it }
   }
 
   ** Current stroke defines how the shapes are outlined
@@ -121,43 +119,9 @@ class Java2DGraphics : Graphics
   {
     set
     {
+      if (&font === it) return
       &font = it
-      size := (it.size * 1.333f).toInt // Java appears to use pixels, not points
-      if (it.weight === FontWeight.normal)
-      {
-        style := it.style.isNormal ? AwtFont.PLAIN : AwtFont.ITALIC
-        g.setFont(AwtFont(it.name, style, size))
-      }
-      else if (it.weight === FontWeight.bold)
-      {
-        style := it.style.isNormal ? AwtFont.BOLD : AwtFont.ITALIC.or(AwtFont.BOLD)
-        g.setFont(AwtFont(it.name, style, size))
-      }
-      else
-      {
-        // doesn't really work, but this is theoretically the correct mapping
-        map := HashMap()
-        map.put(TextAttribute.FAMILY, it.name)
-        map.put(TextAttribute.SIZE, size)
-        switch (it.weight.num)
-        {
-          case 100: map.put(TextAttribute.WEIGHT, TextAttribute.WEIGHT_EXTRA_LIGHT)
-          case 200: map.put(TextAttribute.WEIGHT, TextAttribute.WEIGHT_LIGHT)
-          case 300: map.put(TextAttribute.WEIGHT, TextAttribute.WEIGHT_DEMILIGHT)
-          case 400: map.put(TextAttribute.WEIGHT, TextAttribute.WEIGHT_REGULAR)
-          case 500: map.put(TextAttribute.WEIGHT, TextAttribute.WEIGHT_SEMIBOLD)
-          case 600: map.put(TextAttribute.WEIGHT, TextAttribute.WEIGHT_MEDIUM)
-          case 700: map.put(TextAttribute.WEIGHT, TextAttribute.WEIGHT_BOLD)
-          case 800: map.put(TextAttribute.WEIGHT, TextAttribute.WEIGHT_HEAVY)
-          case 900: map.put(TextAttribute.WEIGHT, TextAttribute.WEIGHT_ULTRABOLD)
-          default:  map.put(TextAttribute.WEIGHT, it.weight.num)
-        }
-        if (it.style === FontStyle.italic)
-        {
-          map.put(TextAttribute.POSTURE, TextAttribute.POSTURE_OBLIQUE)
-        }
-        g.setFont(AwtFont(map))
-      }
+      g.setFont(env.awtFont(it))
     }
   }
 
@@ -301,6 +265,14 @@ class Java2DGraphics : Graphics
     return this
   }
 
+  ** Get current environemnt - lazily load
+  private Java2DGraphicsEnv env()
+  {
+    if (envRef == null) return envRef = GraphicsEnv.cur
+    return envRef
+  }
+  private Java2DGraphicsEnv? envRef
+
   private JavaGraphicsState saveState()
   {
     JavaGraphicsState
@@ -347,3 +319,4 @@ internal class JavaGraphicsState
   Float alpha
   Font? font
 }
+

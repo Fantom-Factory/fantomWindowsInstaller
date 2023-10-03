@@ -1073,4 +1073,68 @@ class MiscTest : CompilerTest
        ], compiler.warns)
   }
 
+//////////////////////////////////////////////////////////////////////////
+// Covariant trap
+//////////////////////////////////////////////////////////////////////////
+
+  Void testCovariantTrap()
+  {
+    compile(
+       "class Foo
+        {
+          Str works() { return \"yeah!\" }
+
+          This self() { return this }
+
+          override Foo? trap(Str n, Obj?[]? args := null) { self }
+
+          Str m()
+          {
+            x := this
+            return x->self.works
+          }
+        }")
+
+    obj := pod.types[0].make
+    method := obj.typeof.method("m") // can't use trap
+    verifyEq(method.callOn(obj, null), "yeah!")
+  }
+
+//////////////////////////////////////////////////////////////////////////
+// Mixin Set Operator
+//////////////////////////////////////////////////////////////////////////
+
+  // TODO: I noticed this doesn't work and wanted to capture the
+  // test case (which currently fails).  1-Dec-2022
+  Void testMixinSetOp()
+  {
+    compile(
+     """mixin M
+        {
+          @Operator abstract This set(Str n, Str v)
+        }
+
+        class C : M
+        {
+          Str:Str map := [:]
+          @Operator override This set(Str n, Str v)
+          {
+            map[n] = v
+            return this
+          }
+
+          Str:Str test()
+          {
+            C c := make
+            M m := c
+            m.set("a", "alpha")
+            m["b"] = "beta"
+            return c.map
+          }
+        }""")
+
+    obj := pod.types[1].make
+    m := obj.typeof.method("test")
+    verifyEq(m.callOn(obj, null), ["a":"Alpha", "b":"Beta"])
+  }
 }
