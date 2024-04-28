@@ -62,11 +62,6 @@ public final class ActorFuture
     throw Err.make("Internal error " + state);
   }
 
-  public final FutureState state()
-  {
-    return (FutureState)FutureState.vals.get(status().ordinal());
-  }
-
   public final Object get() { return get(null); }
   public final Object get(Duration timeout)
   {
@@ -237,7 +232,7 @@ public final class ActorFuture
     // if immediate we are already done so enqueue immediately
     if (immediate)
     {
-      try { a._enqueue(f, false); }
+      try { a._enqueueWhenDone(f); }
       catch (Throwable e) { e.printStackTrace(); }
     }
   }
@@ -248,7 +243,7 @@ public final class ActorFuture
     for (int i=0; i<list.size(); ++i)
     {
       WhenDone wd = (WhenDone)list.get(i);
-      try { wd.actor._enqueue(wd.future, false); }
+      try { wd.actor._enqueueWhenDone(wd.future); }
       catch (Throwable e) { e.printStackTrace(); }
     }
   }
@@ -277,3 +272,4 @@ public final class ActorFuture
   private ArrayList whenDone;  // list of messages to deliver when done
 
 }
+

@@ -179,6 +179,10 @@ class Event
   ** Key instance for key pressed.
   native Key? key()
 
+  ** Character string for key event that represents text typed.
+  ** For example Shift + Key.b would return "B".
+  native Str? keyChar()
+
   ** Err instance if available for 'window.onerror'.
   native Err? err()
 
@@ -199,6 +203,9 @@ class Event
     set(name, args.first)
     return null
   }
+
+  ** Data message used with `HttpSocket.onReceive`
+  native Obj data()
 
   ** The DataTransfer object for this event.
   native DataTransfer dataTransfer()

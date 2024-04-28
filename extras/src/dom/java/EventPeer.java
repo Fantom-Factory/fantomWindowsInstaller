@@ -28,12 +28,13 @@ public class EventPeer
   public boolean      ctrl        (Event self)                          { throw err(); }
   public boolean      shift       (Event self)                          { throw err(); }
   public boolean      meta        (Event self)                          { throw err(); }
-  public long         button      (Event self)                          { throw err(); }
+  public Long         button      (Event self)                          { throw err(); }
   public Key          key         (Event self)                          { throw err(); }
   public Err          err         (Event self)                          { throw err(); }
   public void         stop        (Event self)                          { throw err(); }
   public Object       get         (Event self, String name, Object def) { throw err(); }
   public void         set         (Event self, String name, Object val) { throw err(); }
+  public Object       data        (Event self)                          { throw err(); }
   public DataTransfer dataTransfer(Event self)                          { throw err(); }
 
 // cannot compile against "graphics" pod - see https://fantom.org/forum/topic/2886

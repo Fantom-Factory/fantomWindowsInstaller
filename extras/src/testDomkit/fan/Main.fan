@@ -7,6 +7,7 @@
 //
 
 using compilerJs
+using concurrent
 using util
 using web
 using wisp
@@ -19,8 +20,16 @@ class Main : AbstractMain
   @Opt { help = "apply sample css" }
   Bool css := false
 
+  @Opt { help = "javascript mode to use (js, es)" }
+  Str jsMode := "js"
+
   override Int run()
   {
+    log.info("Running with jsMode=${jsMode}")
+
+    // set javascript mode for file packing
+    WebJsMode.setCur(WebJsMode.fromStr(jsMode))
+
     wisp := WispService
     {
       it.httpPort = this.port
@@ -36,9 +45,12 @@ const class DomkitTestMod : WebMod
   {
     f(this)
     pods := [typeof.pod]
-    this.jsPack  = FilePack(FilePack.toAppJsFiles(pods))
+    appJsFiles  := FilePack.toAppJsFiles(pods)
+    this.jsPack  = FilePack(appJsFiles)
     this.cssPack = FilePack(FilePack.toAppCssFiles(pods))
   }
+
+  const Log log := Log.get("filepack")
 
   const Bool useSampleCss := false
 
@@ -51,14 +63,14 @@ const class DomkitTestMod : WebMod
     n := req.modRel.path.first
     switch (n)
     {
-      case null:       onIndex
-      case "test":     onTest
-      case "app.js":   jsPack.onService
-      case "app.css":  cssPack.onService
-      case "pod":      onPod
-      case "form":     onForm
-      default:         res.sendErr(404)
+      case null:       return onIndex
+      case "test":     return onTest
+      case "app.js":   return jsPack.onService
+      case "app.css":  return cssPack.onService
+      case "pod":      return onPod
+      case "form":     return onForm
     }
+    res.sendErr(404)
   }
 
   Void onIndex()

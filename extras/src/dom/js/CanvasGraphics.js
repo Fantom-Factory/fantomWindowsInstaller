@@ -148,6 +148,14 @@ fan.dom.CanvasGraphics.prototype.fillRoundRect = function(x, y, w, h, wArc, hArc
   return this;
 }
 
+// This clipRoundRect(Float x, Float y, Float w, Float h, Float wArc, Float hArc)
+fan.dom.CanvasGraphics.prototype.clipRoundRect = function(x, y, w, h, wArc, hArc)
+{
+  this.pathRoundRect(x, y, w, h, wArc, hArc);
+  this.cx.clip();
+  return this;
+}
+
 // generate path for a rounded rectangle
 fan.dom.CanvasGraphics.prototype.pathRoundRect = function(x, y, w, h, wArc, hArc)
 {
@@ -161,6 +169,31 @@ fan.dom.CanvasGraphics.prototype.pathRoundRect = function(x, y, w, h, wArc, hArc
   this.cx.quadraticCurveTo(x, y + h , x, y + h - hArc);
   this.cx.lineTo(x, y + hArc);
   this.cx.quadraticCurveTo(x, y, x + wArc, y);
+}
+
+// This drawEllipse(Float x, Float y, Float w, Float h)
+fan.dom.CanvasGraphics.prototype.drawEllipse = function(x, y, w, h)
+{
+  this.pathEllipse(x, y, w, h);
+  this.cx.stroke();
+}
+
+// This fillEllipse(Float x, Float y, Float w, Float h)
+fan.dom.CanvasGraphics.prototype.fillEllipse = function(x, y, w, h)
+{
+  this.pathEllipse(x, y, w, h);
+  this.cx.fill();
+}
+
+// generate path for an ellipse
+fan.dom.CanvasGraphics.prototype.pathEllipse = function(x, y, w, h)
+{
+  var rx = w / 2;
+  var ry = h / 2;
+  var cx = x + rx;
+  var cy = y + ry;
+  this.cx.beginPath();
+  this.cx.ellipse(cx, cy, rx, ry, 0, 0, 2 * Math.PI);
 }
 
 // This drawText(Str s, Float x, Float y)

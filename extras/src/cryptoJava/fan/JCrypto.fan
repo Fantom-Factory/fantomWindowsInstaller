@@ -45,8 +45,19 @@ const class JCrypto : Crypto
     JKeyStore.load(file, opts)
   }
 
-  override Obj? loadPem(InStream in)
+  override Obj? loadPem(InStream in, Str algorithm := "RSA")
   {
-    PemReader(in).next
+    PemReader(in, algorithm).next
   }
+
+  override Jwk? loadJwk(Str:Obj map)
+  {
+    JJwk(map)
+  }
+
+  override Jwk[] loadJwksForUri(Uri uri, Int maxJwKeys := 10)
+  {
+    JJwk.importJwksUri(uri, maxJwKeys)
+  }
+
 }

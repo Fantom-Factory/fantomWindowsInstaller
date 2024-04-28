@@ -108,6 +108,13 @@ abstract class BuildPod : BuildScript
   Uri[]? jsDirs
 
   **
+  ** List of Uris relative to build script that should be searched for '.props'
+  ** files to compile to JavaScript. You may also give relative paths to files
+  ** with a '.props' ext.  If this field is null, it defaults to `resDirs`.
+  **
+  Uri[]? jsProps
+
+  **
   ** The directory to look in for the dependency pod file (and
   ** potentially their recursive dependencies).  If null then we
   ** use the compiler's own pod definitions via reflection (which
@@ -172,25 +179,25 @@ abstract class BuildPod : BuildScript
   }
 
   **
-  ** Compile to all classes to JavaScript
+  ** Compile to all classes to run in Node.js
   **
-  @Target { help = "Compile to javascript" }
-  virtual Void js()
+  @Target { help = "Compile all types to run in Node.js" }
+  virtual Void nodeJs()
   {
     switch (podName)
     {
       case "compilerJs":
-      case "webfwt":
+      case "compilerEs":
       case "testCompiler":
         return
     }
 
     validate
 
-    log.info("js [$podName]")
+    log.info("nodeJs [$podName]")
     log.indent
 
-    compileJs
+    compileNodeJs
 
     log.unindent
   }
@@ -227,7 +234,7 @@ abstract class BuildPod : BuildScript
     }
   }
 
-  @NoDoc protected CompilerInput stdFanCompilerInput()
+  @NoDoc protected virtual CompilerInput stdFanCompilerInput()
   {
     // add my own meta
     meta := this.meta.dup
@@ -270,23 +277,24 @@ abstract class BuildPod : BuildScript
 
     // map my config to CompilerInput structure
     ci := CompilerInput()
-    ci.inputLoc    = Loc.makeFile(scriptFile)
-    ci.podName     = podName
-    ci.summary     = summary
-    ci.version     = version
-    ci.depends     = depends.map |s->Depend| { Depend(applyMacros(s)) }
-    ci.meta        = meta
-    ci.index       = index
-    ci.baseDir     = scriptDir
-    ci.srcFiles    = srcDirs
-    ci.resFiles    = resDirs
-    ci.jsFiles     = jsDirs
-    ci.log         = log
-    ci.includeDoc  = docApi
-    ci.includeSrc  = docSrc
-    ci.mode        = CompilerInputMode.file
-    ci.outDir      = outPodDir.toFile
-    ci.output      = CompilerOutputMode.podFile
+    ci.inputLoc     = Loc.makeFile(scriptFile)
+    ci.podName      = podName
+    ci.summary      = summary
+    ci.version      = version
+    ci.depends      = depends.map |s->Depend| { Depend(applyMacros(s)) }
+    ci.meta         = meta
+    ci.index        = index
+    ci.baseDir      = scriptDir
+    ci.srcFiles     = srcDirs
+    ci.resFiles     = resDirs
+    ci.jsFiles      = jsDirs
+    ci.jsPropsFiles = jsProps ?: resDirs
+    ci.log          = log
+    ci.includeDoc   = docApi
+    ci.includeSrc   = docSrc
+    ci.mode         = CompilerInputMode.file
+    ci.outDir       = outPodDir.toFile
+    ci.output       = CompilerOutputMode.podFile
 
     if (dependsDir != null)
     {
@@ -430,16 +438,20 @@ abstract class BuildPod : BuildScript
   **
   ** Compile to javascript node module
   **
-  virtual Void compileJs()
+  virtual Void compileNodeJs()
   {
     ci := stdFanCompilerInput
     ci.forceJs = true
-    // ci.output = CompilerOutputMode.js
     try
     {
       c := Compiler(ci)
       c.frontend
+      esmDir := Env.cur.homeDir.plus(`lib/es/esm/`)
       Env.cur.homeDir.plus(`lib/js/node_modules/${podName}.js`).out.writeChars(c.js).flush.close
+      if (c.esm != null)
+        esmDir.plus(`${podName}.js`).out.writeChars(c.esm).flush.close
+      if (c.tsDecl != null)
+        esmDir.plus(`${podName}.d.ts`).out.writeChars(c.tsDecl).flush.close
     }
     catch (CompilerErr err)
     {
@@ -526,6 +538,8 @@ abstract class BuildPod : BuildScript
     Delete(this, dir+`lib/fan/${podName}.pod`).run
     Delete(this, dir+`lib/java/${podName}.jar`).run
     Delete(this, dir+`lib/js/node_modules/${podName}.js`).run
+    Delete(this, dir+`lib/es/esm/${podName}.js`).run
+    Delete(this, dir+`lib/es/esm/${podName}.d.ts`).run
     Delete(this, dir+`lib/dotnet/${podName}.dll`).run
     Delete(this, dir+`lib/dotnet/${podName}.pdb`).run
     Delete(this, dir+`lib/tmp/${podName}.dll`).run

@@ -56,7 +56,7 @@ native const class JPrivKey : JKey, PrivKey
 
 native const class JPubKey : JKey, PubKey
 {
-  static JPubKey decode(Buf der)
+  static JPubKey decode(Buf der, Str algorithm)
 
   override Str  algorithm()
   override Str? format()
@@ -65,4 +65,25 @@ native const class JPubKey : JKey, PubKey
   override Bool verify(Buf data, Str digest, Buf signature)
   override Buf  encrypt(Buf data, Str padding := "PKCS1Padding")
   override Str  toStr()
+}
+
+**************************************************************************
+** JPubKey
+**************************************************************************
+@NoDoc
+native const class JMacKey : MacKey
+{
+  static JMacKey load(Buf key, Str algorithm)
+
+  override Str algorithm()
+  override Str? format()
+  override Buf? encoded()
+  override Int macSize()
+  override Buf digest()
+  override This update(Buf buf)
+  override This updateAscii(Str str)
+  override This updateByte(Int i)
+  override This updateI4(Int i)
+  override This updateI8(Int i)
+  override This reset()
 }

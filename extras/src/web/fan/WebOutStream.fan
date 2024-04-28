@@ -227,7 +227,7 @@ class WebOutStream : OutStream
     w("<script type='text/javascript'>").nl
 
     // init Env.vars to pickup in Env.$ctor
-    w("var fan\$env = {").nl
+    w("globalThis.fan\$env = {").nl
     env.keys.each |n,i|
     {
       v := env[n]
@@ -241,9 +241,19 @@ class WebOutStream : OutStream
     main := env["main"]
     if (main != null)
     {
-      w("window.addEventListener('load', function() {
-           fan.sys.Env.\$invokeMain('${main}');
-         }, false);").nl
+      if (WebJsMode.cur.isEs)
+      {
+        w("window.addEventListener('load', function() {
+             fan.sys.Env.cur().__loadVars(fan\$env);
+             fan.sys.Env.__invokeMain('${main}');
+           }, false);").nl
+      }
+      else
+      {
+        w("window.addEventListener('load', function() {
+             fan.sys.Env.\$invokeMain('${main}');
+           }, false);").nl
+      }
     }
 
     w("</script>").nl
