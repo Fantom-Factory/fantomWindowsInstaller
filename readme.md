@@ -1,4 +1,4 @@
-# Fantom v1.0.79 for Windows
+# Fantom v1.0.80 for Windows
 ---
 [![Written for: Fantom](http://img.shields.io/badge/written%20for-Fantom-lightgray.svg)](http://fantom-lang.org/)
 [![Licence: ISC](http://img.shields.io/badge/licence-ISC-blue.svg)](https://choosealicense.com/licenses/isc/)
@@ -11,7 +11,7 @@ Download the latest installer on the [Releases Page](https://github.com/Fantom-F
 
 This is a Windows installer for the [Fantom Programming Language](https://fantom.org/). 
 
-It installs Fantom 1.0.79, compete with SWT for 64 bit platforms, and sets all required environment variables.
+It installs Fantom 1.0.80, compete with SWT for 64 bit platforms, and sets all required environment variables.
 
 ![Installer Screenshot](etc/screenshot.png)
 
@@ -57,7 +57,7 @@ The installer assumes the system already has Java installed. JRE 1.8 or later is
 
 ## Built by NSIS
 
-The installer was created with [NSIS 3.02.1](http://nsis.sourceforge.net/Main_Page) and built with the [large strings](http://nsis.sourceforge.net/Special_Builds) variant to work around problems inherent with altering the `PATH` environment variable.
+The installer was created with [NSIS 3.02.1](https://nsis.sourceforge.io/Main_Page) and built with the [large strings](http://nsis.sourceforge.net/Special_Builds) variant to work around problems inherent with altering the `PATH` environment variable.
 
 The `/SOLID lzma` compressor created the smallest installer.
 

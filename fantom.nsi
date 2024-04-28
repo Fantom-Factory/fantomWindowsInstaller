@@ -3,8 +3,8 @@
 #
 # Built with large strings build for 3.0b1 -> http://nsis.sourceforge.net/Special_Builds
 
-!define VERSION "1.0.79"
-!define AF_VERSION "1.0.79"
+!define VERSION "1.0.80"
+!define AF_VERSION "1.0.80"
 !define MUI_HEADERIMAGE
 !define MUI_HEADERIMAGE_BITMAP "etc\fantomBanner.bmp"
 !define UNINST_REG_KEY	"Software\Microsoft\Windows\CurrentVersion\Uninstall\Fantom"
@@ -40,8 +40,8 @@ VIAddVersionKey "Comments"			"NSIS Fantom Installer by Steve Eynon"
 VIAddVersionKey "LegalCopyright"	"(c) 2011, Brian Frank and Andy Frank"
 VIAddVersionKey "FileDescription"	"Installer for the Fantom Language"
 VIAddVersionKey "FileVersion"		"${AF_VERSION}"
-VIProductVersion "1.0.79.0"
-VIFileVersion	 "1.0.79.0"
+VIProductVersion "1.0.80.0"
+VIFileVersion	 "1.0.80.0"
 
 Var AF_ORIG_INSTDIR
 
@@ -130,14 +130,6 @@ SectionEnd
 
 
 # -----------------------------------------------------------------------------
-Section ".NET Runtime" dotnetRuntime
-	SetOutPath "$INSTDIR\lib\dotnet"
-	File	/r extras\dotnet\*.*
-SectionEnd
-
-
-
-# -----------------------------------------------------------------------------
 Section "Examples" examples
 	SetOutPath "$INSTDIR\examples"
 	File	/r extras\examples\*.*
@@ -154,26 +146,24 @@ SectionEnd
 
 
 # -----------------------------------------------------------------------------
-Section "SWT" swt
-	SetOutPath "$INSTDIR\lib\java"
-	File	/r extras\swt\*.*
+Section "FWT" fwt
+	SetOutPath "$INSTDIR\"
+	File	/r extras\fwt\*.*
 SectionEnd
 
 
 
 LangString DESC_applicationFiles	${LANG_ENGLISH} "Core Fantom libraries"
 LangString DESC_adminTools 			${LANG_ENGLISH} "Admin scripts and text editor configutaion files"
-LangString DESC_dotnetRuntime		${LANG_ENGLISH} ".NET Runtime"
 LangString DESC_examples			${LANG_ENGLISH} "Fantom examples"
 LangString DESC_sourceFiles			${LANG_ENGLISH} "Fantom source files"
-LangString DESC_swt					${LANG_ENGLISH} "Standard Widgit Toolkit"
+LangString DESC_fwt					${LANG_ENGLISH} "Fantom Widgit Toolkit; pods, src, examples, and SWT jars"
 !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
 !insertmacro MUI_DESCRIPTION_TEXT ${applicationFiles}	$(DESC_applicationFiles)
 !insertmacro MUI_DESCRIPTION_TEXT ${adminTools} 		$(DESC_adminTools)
-!insertmacro MUI_DESCRIPTION_TEXT ${dotnetRuntime}		$(DESC_dotnetRuntime)
 !insertmacro MUI_DESCRIPTION_TEXT ${examples}			$(DESC_examples)
 !insertmacro MUI_DESCRIPTION_TEXT ${sourceFiles}		$(DESC_sourceFiles)
-!insertmacro MUI_DESCRIPTION_TEXT ${swt}				$(DESC_swt)
+!insertmacro MUI_DESCRIPTION_TEXT ${fwt}				$(DESC_fwt)
 !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
 
@@ -189,12 +179,11 @@ Function .onInit
 	!insertmacro MULTIUSER_INIT
 
 	# AddSize doesn't work (reports wrong sizes) with the large strings build
-	SectionSetSize ${applicationFiles}	7917
-	SectionSetSize ${adminTools}		 143
-	SectionSetSize ${dotnetRuntime}		 188
-	SectionSetSize ${examples}			 122
-	SectionSetSize ${sourceFiles} 		9668	
-	SectionSetSize ${swt}		 		3900
+	SectionSetSize ${applicationFiles}	 5444
+	SectionSetSize ${adminTools}		  144
+	SectionSetSize ${examples}			   55
+	SectionSetSize ${sourceFiles} 		 9825	
+	SectionSetSize ${fwt}		 		 6387 
 FunctionEnd
 
 Function un.onInit
