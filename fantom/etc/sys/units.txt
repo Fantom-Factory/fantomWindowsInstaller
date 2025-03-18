@@ -11,11 +11,11 @@
 
 -- dimensionless (null)
 percent, %; ; 0.01
+percent_relative_humidity, %RH; ; 0.01
 pixel, px
 decibel, db
 power_factor, pf
 ph, pH
-percent_relative_humidity, %RH
 grams_of_water_per_kilogram_dry_air, gH₂O/kgAir
 volts_per_degree_kelvin, V/K
 degree_days_celsius, °daysC
@@ -517,9 +517,9 @@ microsecond, µs; sec1; 1.0E-6
 millisecond, ms; sec1; 0.0010
 hundredths_second, cs; sec1; 0.01
 tenths_second, ds; sec1; 0.1
-second, sec, s; sec1
+second, s, sec; sec1
 minute, min; sec1; 60.0
-hour, hr, h; sec1; 3600.0
+hour, h, hr; sec1; 3600.0
 day; sec1; 86400.0
 week, wk; sec1; 604800.0
 julian_month, mo; sec1; 2629800.0
@@ -588,3 +588,4 @@ megabyte, MB; ; 1048576
 gigabyte, GB; ; 1073741824
 terabyte, TB; ; 1099511627776
 petabyte, PB; ; 1125899906842624
+
