@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2007, John Sublett
+// Copyright (c) 2007, Brian Frank and Andy Frank
 // Licensed under the Academic Free License version 3.0
 //
 // History:
@@ -8,7 +8,6 @@
 package fan.sql;
 
 import java.sql.*;
-import java.util.HashMap;
 import java.util.Iterator;
 import fan.sys.*;
 import fan.sql.Statement;
@@ -30,6 +29,9 @@ public class StatementPeer
                        java.sql.Statement.RETURN_GENERATED_KEYS :
                        java.sql.Statement.NO_GENERATED_KEYS;
 
+    // are we using the old deprecated escape "@@foo"
+    String depEsc = self.typeof().pod().config("deprecatedEscape");
+    this.isDeprecatedEscape = ((depEsc != null) && depEsc.equals("true"));
   }
 
   public Statement prepare(Statement self)
@@ -39,7 +41,33 @@ public class StatementPeer
     // syntax must be replaced with ?.  It's not a simple
     // replace though because we need to keep the key/value
     // map.
-    parse(self.sql);
+
+    // Maybe there is a parameter or an escape.
+    if ((self.sql.indexOf('@') != -1) || (self.sql.indexOf('\\') != -1))
+    {
+      // Check for deprecated escape: "@@foo"
+      if (isDeprecatedEscape)
+      {
+        DeprecatedTokenizer t = DeprecatedTokenizer.make(self.sql);
+        this.translated = t.sql;
+        this.paramMap = t.params;
+      }
+      else
+      {
+        Tokenizer t = Tokenizer.make(self.sql);
+        this.translated = t.sql;
+        this.paramMap = t.params;
+      }
+    }
+    // No parameters or escapes, so we don't need to tokenize.
+    else
+    {
+      this.translated = self.sql;
+      this.paramMap = new Map(
+        Sys.StrType,
+        Sys.IntType.toListOf());
+    }
+
     try
     {
       prepared = true;
@@ -68,7 +96,9 @@ public class StatementPeer
         rs = stmt.executeQuery(self.sql);
       }
 
-      return toRows(rs);
+      List result = toRows(rs);
+      rs.close();
+      return result;
     }
     catch (SQLException ex)
     {
@@ -83,7 +113,7 @@ public class StatementPeer
   /**
    * Invoke the 'eachFunc' on every row in the result.
    */
-  void each(ResultSet rs, Func eachFunc)
+  private Object each(ResultSet rs, Func eachFunc, boolean isWhile)
     throws SQLException
   {
     Cols cols = makeCols(rs);
@@ -95,15 +125,17 @@ public class StatementPeer
         row = makeRow(rs, cols, converters);
       else
         updateRow(rs, row, converters);
-      eachFunc.call(row);
+      Object r = eachFunc.call(row);
+      if (isWhile && (r != null)) return r;
     }
+    return null;
   }
 
   /**
    * Map result set columns to Fan columns.
    * result set.
    */
-  Cols makeCols(ResultSet rs)
+  private Cols makeCols(ResultSet rs)
     throws SQLException
   {
     // map the meta-data to a dynamic type
@@ -129,7 +161,7 @@ public class StatementPeer
    * Make a row of the specified dynamic type and set the cell values
    * from the specified result set.
    */
-  Row makeRow(ResultSet rs, Cols cols, SqlUtil.SqlToFan[] converters)
+  private Row makeRow(ResultSet rs, Cols cols, SqlUtil.SqlToFan[] converters)
     throws SQLException
   {
     Row row = Row.make();
@@ -145,7 +177,7 @@ public class StatementPeer
   /**
    * Update an existing row with new values from the specified result set.
    */
-  Object updateRow(ResultSet rs, Row row, SqlUtil.SqlToFan[] converters)
+  private Object updateRow(ResultSet rs, Row row, SqlUtil.SqlToFan[] converters)
     throws SQLException
   {
     int numCols = rs.getMetaData().getColumnCount();
@@ -158,7 +190,7 @@ public class StatementPeer
   /**
    * Make the list of converters for the specified result set.
    */
-  SqlUtil.SqlToFan[] makeConverters(ResultSet rs)
+  private SqlUtil.SqlToFan[] makeConverters(ResultSet rs)
     throws SQLException
   {
     int numCols = rs.getMetaData().getColumnCount();
@@ -171,7 +203,7 @@ public class StatementPeer
   /**
    * Convert the result set to a list of the 'of' type.
    */
-  List toRows(ResultSet rs)
+  private List toRows(ResultSet rs)
     throws SQLException
   {
     Cols cols = makeCols(rs);
@@ -182,6 +214,17 @@ public class StatementPeer
   }
 
   public void queryEach(Statement self, Map params, Func eachFunc)
+  {
+    doQueryEach(self, params, eachFunc, false);
+  }
+
+  public Object queryEachWhile(Statement self, Map params, Func eachFunc)
+  {
+    return doQueryEach(self, params, eachFunc, true);
+  }
+
+  private Object doQueryEach(
+      Statement self, Map params, Func eachFunc, boolean isWhile)
   {
     try
     {
@@ -197,7 +240,9 @@ public class StatementPeer
         rs = stmt.executeQuery(self.sql);
       }
 
-      each(rs, eachFunc);
+      Object result = each(rs, eachFunc, isWhile);
+      rs.close();
+      return result;
     }
     catch (SQLException ex)
     {
@@ -246,7 +291,10 @@ public class StatementPeer
       // if result is ResultSet, then return Row[]
       if (isResultSet)
       {
-        return toRows(stmt.getResultSet());
+        ResultSet rs = stmt.getResultSet();
+        List result = toRows(rs);
+        rs.close();
+        return result;
       }
 
       // if auto-generated keys, then return Int[]
@@ -269,6 +317,7 @@ public class StatementPeer
 
           keys.add(key);
         }
+        rs.close();
         if (keys != null) return keys;
       }
 
@@ -282,10 +331,50 @@ public class StatementPeer
     return Long.valueOf(-1);
   }
 
+  public List executeBatch(Statement self, List paramsList)
+  {
+    if (!prepared)
+      throw SqlErr.make("Statement has not been prepared.");
+    PreparedStatement pstmt = (PreparedStatement)stmt;
+
+    try
+    {
+      // add batch
+      for (int i = 0; i < paramsList.size(); i++)
+      {
+        setParameters((Map) paramsList.get(i));
+        pstmt.addBatch();
+      }
+
+      // execute batch
+      int[] exec = pstmt.executeBatch();
+
+      // process result
+      List result = List.make(Sys.IntType, exec.length);
+      for (int i = 0; i < exec.length; i++)
+      {
+        int n = exec[i];
+
+        // A less-than-zero value here is always
+        // java.sql.Statement.SUCCESS_NO_INFO. We treat that as a null,
+        // indicating that the command was processed successfully but that the
+        // number of rows affected is unknown.
+        result.add(n < 0 ? null : (long)n);
+      }
+      return result;
+    }
+    catch (SQLException ex)
+    {
+      throw SqlConnImplPeer.err(ex);
+    }
+  }
+
   public List more(Statement self)
   {
     try
     {
+      // We don't need to close this ResultSet.
+      // https://docs.oracle.com/javase/8/docs/api/java/sql/Statement.html#getMoreResults--
       if (stmt.getMoreResults())
         return toRows(stmt.getResultSet());
       else
@@ -307,19 +396,20 @@ public class StatementPeer
       throw SqlErr.make("Statement has not been prepared.");
     PreparedStatement pstmt = (PreparedStatement)stmt;
 
-    Iterator i = paramMap.entrySet().iterator();
+    Iterator i = paramMap.pairsIterator();
     while (i.hasNext())
     {
       java.util.Map.Entry entry = (java.util.Map.Entry)i.next();
       String key = (String)entry.getKey();
       Object value = params.get(key);
       Object jobj = SqlUtil.fanToSqlObj(value);
-      int[] locs = (int[])entry.getValue();
-      for (int j = 0; j < locs.length; j++)
+      List locs = (List)entry.getValue();
+      for (int j = 0; j < locs.size(); j++)
       {
         try
         {
-          pstmt.setObject(locs[j], jobj);
+          int idx = ((Long) locs.get(j)).intValue();
+          pstmt.setObject(idx, jobj);
         }
         catch (SQLException e)
         {
@@ -329,7 +419,6 @@ public class StatementPeer
       }
     }
   }
-
 
   public void close(Statement self)
   {
@@ -365,212 +454,16 @@ public class StatementPeer
     if (limit > 0) stmt.setMaxRows(limit);
   }
 
-//////////////////////////////////////////////////////////////////////////
-// Parse
-//////////////////////////////////////////////////////////////////////////
-
-  private void parse(String sql)
-  {
-    StringBuffer jsql = new StringBuffer(sql.length());
-    int index = sql.indexOf('@');
-
-    // make sure the sql has at least one parameter
-    // before bothering with the parse
-    if (index == -1)
-    {
-      translated = sql;
-      paramMap = new HashMap();
-      return;
-    }
-
-    Tokenizer t = new Tokenizer(sql);
-    String s;
-    int pIndex = 1;
-    while ((s = t.next()) != null)
-    {
-      if (s.length() == 0) continue;
-      if (s.charAt(0) == '@')
-      {
-        if (s.length() == 1)
-          jsql.append(s);
-        else
-        {
-          if (paramMap == null) paramMap = new HashMap();
-
-          // param
-          String key = s.substring(1);
-          int[] locs = (int[])paramMap.get(key);
-          if (locs == null)
-          {
-            locs = new int[] { pIndex };
-            paramMap.put(key, locs);
-          }
-          else
-          {
-            int[] temp = new int[locs.length+1];
-            System.arraycopy(locs, 0, temp, 0, locs.length);
-            temp[locs.length] = pIndex;
-            paramMap.put(key, temp);
-          }
-          pIndex++;
-          jsql.append("?");
-        }
-      }
-      else
-        jsql.append(s);
-    }
-
-    translated = jsql.toString();
-  }
-
-//////////////////////////////////////////////////////////////////////////
-// Tokenizer
-//////////////////////////////////////////////////////////////////////////
-
-  private class Tokenizer
-  {
-    public Tokenizer(String sql)
-    {
-      this.sql = sql;
-      len = sql.length();
-      current = 0;
-    }
-
-    public String next()
-    {
-      switch (mode)
-      {
-        case MODE_TEXT: return text();
-        case MODE_PARAM: return param();
-        case MODE_QUOTE: return quotedText();
-        case MODE_END: return null;
-
-        default: return null;
-      }
-    }
-
-    private String text()
-    {
-      int start = current;
-      while (current != len)
-      {
-        int ch = sql.charAt(current);
-        if (ch == '@') { mode = MODE_PARAM; break; }
-        if (ch == '\'') { mode = MODE_QUOTE; break; }
-
-        current++;
-
-        if (current == len) mode = MODE_END;
-      }
-
-      return sql.substring(start, current);
-    }
-
-    private String param()
-    {
-      int start = current;
-      current++;
-
-      if (current == len)
-        throw SqlErr.make("Invalid parameter.  Parameter name required.");
-
-      int ch = sql.charAt(current);
-      // @@ means we really wanted @
-      if (sql.charAt(current) == '@')
-      {
-        current++;
-        return "@";
-      }
-
-      while (current != len)
-      {
-        ch = sql.charAt(current);
-        boolean valid =
-          ((ch >= 'a') && (ch <= 'z')) ||
-          ((ch >= 'A') && (ch <= 'Z')) ||
-          ((ch >= '0') && (ch <= '9')) ||
-          (ch == '_');
-        if (!valid)
-        {
-          if (ch == '\'')
-          {
-            mode = MODE_QUOTE;
-            break;
-          }
-          else
-          {
-            mode = MODE_TEXT;
-            break;
-          }
-        }
-        current++;
-        if (current == len) mode = MODE_END;
-      }
-
-      if (current == start+1)
-        throw SqlErr.make("Invalid parameter.  Parameter name required.");
-
-      return sql.substring(start, current);
-    }
-
-    private String quotedText()
-    {
-      int start = current;
-      int end = -1;
-      current++;
-
-      if (current == len)
-        throw SqlErr.make("Unterminated quoted text.  Expecting '.");
-
-      while (current != len)
-      {
-        int ch = sql.charAt(current);
-        if (ch == '\'')
-        {
-          end = current;
-          current++;
-          break;
-        }
-
-        current++;
-      }
-
-      if (end == -1)
-        throw SqlErr.make("Unterminated quoted text. Expecting '.");
-
-      if (current == len)
-        mode = MODE_END;
-      else
-      {
-        int ch = sql.charAt(current);
-        if (ch == '@')
-          mode = MODE_PARAM;
-        else if (ch == '\'')
-          mode = MODE_QUOTE;
-        else
-          mode = MODE_TEXT;
-      }
-
-      return sql.substring(start, end+1);
-    }
-
-    String sql;
-    int    mode = MODE_TEXT;
-    int    len;
-    int    current;
-  }
-
-  private static final int MODE_TEXT  = 0;
-  private static final int MODE_QUOTE = 1;
-  private static final int MODE_PARAM = 2;
-  private static final int MODE_END   = 3;
-
   private boolean prepared = false;
   private String translated;
   private java.sql.Statement stmt;
-  private HashMap paramMap;
+  private Map paramMap;
   private int limit = 0;              // limit field value
+
+  // These are set during init():
   private boolean isInsert;           // does sql contain insert keyword
   private boolean isAutoKeys;         // isInsert and connector supports auto-gen keys
   private int autoKeyMode;            // JDBC constant for auto-gen keys
+  private boolean isDeprecatedEscape; // are we using the old deprecated escape "@@foo"
 }
+

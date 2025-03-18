@@ -857,7 +857,6 @@ class CheckErrorsTest : CompilerTest
         27,  3, "Invalid combination of 'new' and 'native' modifiers",
 
         29,  3, "Invalid combination of 'new' and 'once' modifiers",
-        30,  3, "Invalid combination of 'static' and 'once' modifiers",
         31,  3, "Invalid combination of 'abstract' and 'once' modifiers",
 
         42,  3, "Mixins cannot have once methods",
@@ -1885,5 +1884,32 @@ class CheckErrorsTest : CompilerTest
        ])
   }
 
+
+//////////////////////////////////////////////////////////////////////////
+// Void Compares
+//////////////////////////////////////////////////////////////////////////
+
+  Void testVoidCompares()
+  {
+   verifyErrors(
+     """class Foo
+        {
+           Void bar()
+           {
+             if (obj == foo) return  // line 5
+             if (foo != obj) return  // line 6
+             if (obj === foo) return  // line 7
+           }
+
+           Obj? obj() { null }
+
+           Void foo() {}
+         }""",
+       [
+         5, 17, "Cannot compare to Void type",
+         6, 10, "Cannot compare to Void type",
+         7, 18, "Cannot compare to Void type",
+       ])
+  }
 }
 

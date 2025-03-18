@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2007, John Sublett
+// Copyright (c) 2007, Brian Frank and Andy Frank
 // Licensed under the Academic Free License version 3.0
 //
 // History:
@@ -41,10 +41,17 @@ class Statement
 
   **
   ** Execute the statement.  For each row in the result, invoke
-  ** the specified function 'each'.  The 'Obj' passed to the
-  ** 'each' function will be of type 'Row'.
+  ** the specified function 'eachFunc'.
   **
   native Void queryEach([Str:Obj]? params, |Row row| eachFunc)
+
+  **
+  ** Execute the statement.  For each row in the result, invoke the specified
+  ** function 'eachFunc'. If the function returns non-null, then break the
+  ** iteration and return the resulting object.  Return null if the function
+  ** returns null for every item.
+  **
+  native Obj? queryEachWhile([Str:Obj]? params, |Row row->Obj?| eachFunc)
 
   **
   ** Execute a SQL statement and if applicable return a result:
@@ -56,6 +63,25 @@ class Statement
   **   - Return an 'Int' with the update count
   **
   native Obj execute([Str:Obj]? params := null)
+
+  **
+  ** Execute a batch of commands on a prepared Statement. If all commands
+  ** execute successfully, returns an array of update counts.
+  **
+  ** For each element in the array, if the element is non-null, then it
+  ** represents an update count giving the number of rows in the database that
+  ** were affected by the command's execution.
+  **
+  ** If a given array element is null, it indicates that the command was
+  ** processed successfully but that the number of rows affected is unknown.
+  **
+  ** If one of the commands in a batch update fails to execute properly, this
+  ** method throws a SqlErr that wraps a java.sql.BatchUpdateException, and a
+  ** JDBC driver may or may not continue to process the remaining commands in
+  ** the batch, consistent with the underlying DBMS -- either always continuing
+  ** to process commands or never continuing to process commands.
+  **
+  native Int?[] executeBatch([Str:Obj]?[] paramsList)
 
   **
   ** If the last execute has more results from a multi-result stored
@@ -91,3 +117,4 @@ class Statement
   native Int? limit
 
 }
+

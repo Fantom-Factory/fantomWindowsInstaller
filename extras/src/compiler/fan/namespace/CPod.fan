@@ -96,6 +96,5 @@ mixin CPod
   {
     return name
   }
-
 }
 

@@ -107,7 +107,20 @@ class JsType : JsNode
     {
       if (slot.parent.isObj) return
       if (slot.isAbstract) return
-      if (slot.isStatic) return
+
+      if (slot.isStatic)
+      {
+        // copy static fields
+        //
+        // NOTE: we don't need to do static methods because the compiler
+        // appears to resolve those correctly in an earlier step
+        if (slot.isPrivate) return
+        if (slot.name == "static\$init") return
+        if (slot is CMethod) return
+        slotName := methodToJs(slot.name)
+        js.wl("static ${slotName}() { return ${qnameToJs(slot.parent)}.${slotName}(); }").nl
+        return
+      }
 
       if (!slot.isPrivate)
       {
@@ -133,7 +146,7 @@ class JsType : JsNode
     if (instanceInit != null)
     {
       plugin.curMethod = instanceInit
-      writeBlock(instanceInit.code)
+      writeBlock(instanceInit.code) |stmt| { stmt.isOnceFieldInit ? true : false }
       plugin.curMethod = null
     }
     js.unindent
@@ -222,6 +235,9 @@ class JsType : JsNode
 
   private static Str fieldDefVal(FieldDef f)
   {
+    // once fields are initialized to undefined
+    if (f.isOnce) return "undefined"
+
     defVal    := "null"
     fieldType := f.fieldType
     if (!fieldType.isNullable)
@@ -255,6 +271,13 @@ class JsType : JsNode
 
     // we generate our own special version of this
     if (f.parent.isEnum && accessName == "vals") return
+
+    // special handling for static once fields
+    if (f.isOnce)
+    {
+      js.wl("static ${accessName}(it) { if (it === undefined) return ${target}.${privName}; else ${target}.${privName} = it; }").nl
+      return
+    }
 
     js.wl("static ${accessName}() {").indent
 
@@ -375,7 +398,9 @@ class JsType : JsNode
       }
 
       // method body
-      writeBlock(m.code)
+      |Stmt s->Bool|? filter := null
+      if (m.isStatic) filter = |Stmt s->Bool| { s.isOnceFieldInit ? true : false }
+      writeBlock(m.code, filter)
     }
 
     js.unindent

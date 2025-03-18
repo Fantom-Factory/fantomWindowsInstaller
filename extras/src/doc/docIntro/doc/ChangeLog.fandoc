@@ -6,6 +6,24 @@
 ** license:    Licensed under the Academic Free License version 3.0
 **************************************************************************
 
+*Build 1.0.81 (6 Dec 2024)*
+- New markdown pod
+- New util::Console API
+- Rewrite fant in Fantom as new util::TestRunner class
+- Add dom::Storage.keys to iterate all keys
+- Add new SqlConnPool API
+- Add support for postgres TEXT[] type
+- Support for static once methods
+- StrBuf.addRange
+- Add double checked locking into ClassType.java reflect and finish
+- Add sql escape syntax for "@" and "\"
+- Deprecate old, undocumented sql escape syntax (This is a breaking change)
+- Add sql::Statement.executeBatch method
+- Add concurrent::ActorMsg
+- Add List/Map setNotNull
+- Fix PathEnv via fan.props to order path correctly
+- Unit db change sec and hr primary symbol to match Duration format
+
 *Build 1.0.80 (23 Apr 2024)*
 - New ECMA class-based JavaScript design
 - Move fwt pods into separate repo
@@ -20,7 +38,7 @@
 - Fixes for Crypto EC keypair support
 - Fix Time.minus 24hr boundary checks
 - Allow mixins to have non-abstract fields if no storage required
-- Fix Color HSL implementation to match browser behavoir
+- Fix Color HSL implementation to match browser behavior
 - Add MimeType.isText
 - Add util::LockFile
 - Redesign ES compiler to not generate code for every pod

@@ -34,7 +34,7 @@ internal class InitCmd : NodeJsCmd
   {
     out := ms.file("fantom").out
     ms.writeBeginModule(out)
-    ["sys", "fan_mime", "fan_units"].each |m| { ms.writeInclude(out, "${m}.ext") }
+    ["sys", "fan_indexed_props", "fan_mime", "fan_units"].each |m| { ms.writeInclude(out, "${m}.ext") }
     ["os", "path", "fs", "url"].each |m| { ms.writeInclude(out, "${m}") }
 
     template := this.typeof.pod.file(`/res/fantomTemplate.js`).readAllStr
@@ -48,21 +48,8 @@ internal class InitCmd : NodeJsCmd
   private Void writeTsDecl()
   {
     sysDecl := ms.moduleDir.plus(`sys.d.ts`)
-    sysDir  := Env.cur.homeDir.plus(`src/sys/`)
-    ci      := CompilerInput()
-    ci.podName    = "sys"
-    ci.summary    = "synthetic sys build"
-    ci.version    = Pod.find("sys").version
-    ci.depends    = Depend[,]
-    ci.inputLoc   = Loc.makeFile(sysDir.plus(`build.fan`))
-    ci.baseDir    = sysDir
-    ci.srcFiles   = [sysDir.plus(`fan/`).uri]
-    ci.mode       = CompilerInputMode.file
-    ci.output     = CompilerOutputMode.podFile
-    ci.includeDoc = true
-    c := Compiler(ci)
-    c.frontend
-    if (c.tsDecl != null)
-      sysDecl.out.writeChars(c.tsDecl).flush.close
+    out := sysDecl.out
+    GenTsDecl.genForPod(Pod.find("sys"), out, ["allTypes":true])
+    out.flush.close
   }
 }

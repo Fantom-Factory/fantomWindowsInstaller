@@ -276,7 +276,7 @@ class CheckErrors : CompilerStep
     else
     {
       // static fields must be const
-      if (flags.and(FConst.Static) != 0) err("Static field '$f.name' must be const", loc)
+      if (flags.and(FConst.Static) != 0 && flags.and(FConst.Synthetic) == 0) err("Static field '$f.name' must be const", loc)
     }
 
     // check invalid protection combinations on setter (getter
@@ -383,7 +383,6 @@ class CheckErrors : CompilerStep
       if (flags.and(FConst.Abstract) != 0) err("Invalid combination of 'static' and 'abstract' modifiers", loc)
       else if (flags.and(FConst.Override) != 0) err("Invalid combination of 'static' and 'override' modifiers", loc)
       else if (flags.and(FConst.Virtual) != 0) err("Invalid combination of 'static' and 'virtual' modifiers", loc)
-      if (flags.and(FConst.Once) != 0) err("Invalid combination of 'static' and 'once' modifiers", loc)
     }
 
     // check invalid abstract flags
@@ -1000,6 +999,19 @@ class CheckErrors : CompilerStep
       err("Incomparable types '$lhs.ctype' and '$rhs.ctype'", lhs.loc)
       return false
     }
+
+    if (lhs.ctype.isVoid)
+    {
+      err("Cannot compare to Void type", lhs.loc)
+      return false
+    }
+
+    if (rhs.ctype.isVoid)
+    {
+      err("Cannot compare to Void type", rhs.loc)
+      return false
+    }
+
     return true
   }
 
@@ -1912,3 +1924,4 @@ class CheckErrors : CompilerStep
   private Int finallyDepth := 0          // finally block depth
   private Bool isSys
 }
+

@@ -130,7 +130,10 @@ class Event
   @NoDoc static native Event makeMock()
 
   ** Create an `Event` instance from a native JavaScript Event object.
-  static native Event fromNative(Obj event)
+  @Js static native Event fromNative(Obj event)
+
+  ** Get the native JavaScript Event object
+  @Js native Obj toNative()
 
 //////////////////////////////////////////////////////////////////////////
 // Methods
@@ -223,3 +226,4 @@ class Event
     " }"
   }
 }
+

@@ -23,9 +23,22 @@ class JsPod : JsNode
     this.pod = plugin.pod
 
     // map native files by name
+    baseDir := c.input.baseDir
     c.jsFiles?.each |f| {
-      // we expect ES javascript files in es/ directory
-      natives[f.name] = f.parent.parent.plus(`es/${f.name}`)
+      // get the relative uri to this js file from the baseDir.
+      // For example, consider pod "podName" in this location:
+      //   /path/to/podName/js/Foo.js
+      // The baseDir is /path/to/podName/
+      // When we relativie it it becomes js/Foo.js
+      // We then strip the first directory from the path and change it to es.
+      // Therefore we look for the file in /path/to/podName/es/Foo.js
+      //
+      // This supports deeper paths also:
+      //   /path/to/podName/js/dir1/Bar.js => /path/to/podname/es/dir1/Bar.js
+      relUri := f.uri.relTo(baseDir.uri)[1..-1]
+      esFile := baseDir.plus(`es/${relUri}`)
+      if (esFile.exists)
+        natives[f.name] = esFile
     }
 
     // find types to emit
@@ -63,16 +76,15 @@ class JsPod : JsNode
     js.wl("const sys = fantom ? fantom.sys : __require('sys.js');")
 
     // we need to require full dependency chain
-    pods := (Pod[])pod.depends.mapNotNull |p->Pod?|
+    pods := (CPod[])pod.depends.mapNotNull |p->CPod?|
     {
       if (p.name.startsWith("[java]")) return null
-      return Pod.find(p.name)
+      return c.ns.resolvePod(p.name, null)
     }
-    pods = Pod.orderByDepends(Pod.flattenDepends(pods))
-    pods.each |depend|
+    c.ns.flattenAndOrderByDepends(pods).each |depend|
     {
       if (depend.name == "sys") return
-      if (!c.ns.resolvePod(depend.name, null).hasJs) return
+      if (!c.ns.resolvePod(depend.name, null).hasJs && !c.input.forceJs) return
       // NOTE if we change sys to fan we need to update JNode.qnameToJs
       // js.wl("import * as ${depend.name} from './${depend.name}.js';")
       js.wl("const ${plugin.podAlias(depend.name)} = __require('${depend.name}.js');")
@@ -81,42 +93,6 @@ class JsPod : JsNode
     js.wl("// cjs require end")
     js.wl("const js = (typeof window !== 'undefined') ? window : global;")
   }
-
-  // private Void writeImports()
-  // {
-  //   // special handling for dom
-  //   if (pod.name == "dom")
-  //   {
-  //     js.wl("import * as es6 from './es6.js'")
-  //   }
-
-  //   pod.depends.each |depend|
-  //   {
-  //     // NOTE if we change sys to fan we need to update JNode.qnameToJs
-  //     // js.wl("import * as ${depend.name} from './${depend.name}.js';")
-  //     if (Pod.find(depend.name).file(`/esm/${depend.name}.js`, false) != null)
-  //       js.wl("import * as ${depend.name} from './${depend.name}.js';")
-  //     else
-  //     {
-  //       // TODO: FIXIT - non-js dependencies that will only be there in node env
-  //       // but not the browser. Maybe the browser should return empty export in
-  //       // this case? or we could put a comment on the same line that we
-  //       // could search for and strip out before serving the js in the browser.
-  //       // js.wl("let ${depend.name};")
-  //       // await import('./esm/testSys.js').then(obj => testSys = obj).catch(err => {});
-  //       // js.wl("await import('./${depend.name}.js').then(obj => ${depend.name}=obj).catch(err => {});")
-
-  //       js.wl("import * as ${depend.name} from './${depend.name}.js';")
-  //     }
-
-
-  //     // if (depend.name == "sys")
-  //     //   js.wl("import * as fan from './sys.js';")
-  //     // else
-  //     //   js.wl("import * as ${depend.name} from './${depend.name}.js")
-  //   }
-  //   js.nl
-  // }
 
   private Void writeTypes()
   {
@@ -143,19 +119,17 @@ class JsPod : JsNode
       this.peers[t.name] = true
     }
 
-    file := natives[key]
+    file := natives.remove(key)
     if (file == null || !file.exists)
     {
       warn("Missing native impl for ${t.def.signature}", Loc("${t.name}.fan"))
       // Do not export peer types that we don't have implementations for
-      natives.remove(key)
       this.peers[t.name] = false
     }
     else
     {
       in := file.in
       js.minify(in)
-      natives.remove(key)
     }
   }
 

@@ -3,26 +3,34 @@
 // Licensed under the Academic Free License version 3.0
 //
 // History:
-//   1 Apr 24  Brian Frank  Creation
+//   18 Jun 24  Brian Frank  Creation
 //
-package fanx.util;
+package fan.util;
 
-import java.io.*;
+import java.io.PrintStream;
 import java.lang.reflect.Method;
 import fan.sys.*;
 
-
-/**
- * EnvConsole tries to tame the mess of Java console input using a
- * series of different implementations and fallbacks:
- *   1. jline 3
- *   2. jline 2
- *   3. java.io.Console
- *   4. stdin
- */
-public abstract class EnvConsole
+public abstract class NativeConsole extends Console
 {
-  public static EnvConsole init()
+
+//////////////////////////////////////////////////////////////////////////
+// Factory
+//////////////////////////////////////////////////////////////////////////
+
+  public static NativeConsole curNative()
+  {
+    if (cur == null) cur = create();
+    return cur;
+  }
+  private static NativeConsole cur;
+
+  /*
+   * To test jline2:
+   * java -Dfan.home=/work/fan -cp /work/fan/lib/java/sys.jar:/work/stuff/jline/jline-2.9.jar fanx.tools.Fan util::ConsoleTest
+   */
+
+  private static NativeConsole create()
   {
     try { return new Jline3Console(); } catch (Exception e) {}
     try { return new Jline2Console(); } catch (Exception e) {}
@@ -30,39 +38,123 @@ public abstract class EnvConsole
     return new StdinConsole();
   }
 
-  /*
-  // java -Dfan.home=/work/fan -cp ../lib/java/sys.jar:../lib/java/ext/jline-2.9.jar fanx.util.EnvConsole
+//////////////////////////////////////////////////////////////////////////
+// Methods
+//////////////////////////////////////////////////////////////////////////
 
-  public static void main(String[] args) throws Exception
+  public Long width()
   {
-    test(new Jline3Console());
-    test(new Jline2Console());
-    test(new JavaConsole(System.console()));
-    test(new StdinConsole());
- }
-
-  private static void test(EnvConsole c)
-  {
-    System.out.println();
-    System.out.println("### Test: " + c.getClass());
-    String s1 = c.prompt("prompt 1> ");
-    System.out.println("=>" + s1);
-    String s2 = c.prompt("prompt 2> ");
-    System.out.println("=>" + s2);
-    String p = c.promptPassword("password> ");
-    System.out.println("=>" + p);
+    return null;
   }
-  */
 
+  public Long height()
+  {
+    return null;
+  }
+
+  public Console debug(Object msg) { return debug(msg, null); }
+  public Console debug(Object msg, Err err)
+  {
+    return log("DEBUG", msg, err);
+  }
+
+  public Console info(Object msg) { return info(msg, null); }
+  public Console info(Object msg, Err err)
+  {
+    return log("", msg, err);
+  }
+
+  public Console warn(Object msg) { return warn(msg, null); }
+  public Console warn(Object msg, Err err)
+  {
+    return log("WARN", msg, err);
+  }
+
+  public Console err(Object msg) { return err(msg, null); }
+  public Console err(Object msg, Err err)
+  {
+    return log("ERR", msg, err);
+  }
+
+  private Console log(String level, Object msg, Err err)
+  {
+    if (indent > 0)
+    {
+      out().print(FanStr.spaces(indent*2));
+    }
+    if (!level.isEmpty())
+    {
+      out().print(level);
+      out().print(": ");
+    }
+    out().println(msg);
+    if (err != null)
+    {
+      List lines = FanStr.splitLines(err.traceToStr());
+      for (int i=0; i<lines.sz(); ++i)
+      {
+        out().print(FanStr.spaces(indent*2));
+        out().println(lines.get(i));
+      }
+    }
+    return this;
+  }
+
+  public Console table(Object obj)
+  {
+    ConsoleTable.make(obj).dump(this);
+    return this;
+  }
+
+  public Console group(Object obj) { return group(obj, false); }
+  public Console group(Object obj, boolean collapse)
+  {
+    info(obj);
+    indent++;
+    return this;
+  }
+  private int indent;
+
+  public Console groupEnd()
+  {
+    indent--;
+    if (indent < 0) indent = 0;
+    return this;
+  }
+
+  public Console clear()
+  {
+    return this;
+  }
+
+  public String prompt() { return prompt(""); }
   public abstract String prompt(String msg);
 
+  public String promptPassword() { return promptPassword(""); }
   public abstract String promptPassword(String msg);
+
+  public Type typeof()
+  {
+    if (type == null) type = Type.find("util::NativeConsole");
+    return type;
+  }
+  private static Type type;
+
+  public String toStr()
+  {
+    return getClass().getName();
+  }
+
+  private PrintStream out()
+  {
+    return System.out;
+  }
 
 //////////////////////////////////////////////////////////////////////////
 // StdinConsole
 //////////////////////////////////////////////////////////////////////////
 
-  static class StdinConsole extends EnvConsole
+  static class StdinConsole extends NativeConsole
   {
     public String prompt(String msg)
     {
@@ -88,7 +180,7 @@ public abstract class EnvConsole
 // JavaConsole
 //////////////////////////////////////////////////////////////////////////
 
-  static class JavaConsole extends EnvConsole
+  static class JavaConsole extends NativeConsole
   {
     JavaConsole(java.io.Console c) { this.console = c; }
 
@@ -109,10 +201,14 @@ public abstract class EnvConsole
 // Jline3Console
 //////////////////////////////////////////////////////////////////////////
 
-  static class Jline3Console extends EnvConsole
+  static class Jline3Console extends NativeConsole
   {
     Jline3Console() throws Exception
     {
+      // TerminalBuilder.terminal()
+      Class terminalBuilder = Class.forName("org.jline.terminal.TerminalBuilder");
+      this.terminal  = terminalBuilder.getMethod("terminal", new Class[] {}).invoke(null);
+
       // reader = LineReaderBuilder.builder().build()
       Class builderClass  = Class.forName("org.jline.reader.LineReaderBuilder");
       Class readerClass   = Class.forName("org.jline.reader.LineReader");
@@ -121,6 +217,43 @@ public abstract class EnvConsole
       this.reader         = builderBuild.invoke(builderCtor.invoke(null));
       this.readLine       = readerClass.getMethod("readLine", new Class[] { String.class });
       this.readLineMask   = readerClass.getMethod("readLine", new Class[] { String.class, Character.class });
+    }
+
+    public Long width()
+    {
+      try
+      {
+        return ((Integer)terminal.getClass().getMethod("getWidth").invoke(terminal)).longValue();
+      }
+      catch (Exception e) {} // ignore
+      return null;
+    }
+
+    public Long height()
+    {
+      try
+      {
+        return ((Integer)terminal.getClass().getMethod("getHeight").invoke(terminal)).longValue();
+      }
+      catch (Exception e) {} // ignore
+      return null;
+    }
+
+    public Console clear()
+    {
+      try
+      {
+        // terminal.puts(InfoCmp$Capability.clear_screen)
+        Class capabilityClass = Class.forName("org.jline.utils.InfoCmp$Capability");
+        Object clear = capabilityClass.getField("clear_screen").get(null);
+        Method puts = terminal.getClass().getMethod("puts", new Class[] { capabilityClass, Object[].class });
+        puts.invoke(terminal, clear, new Object[0]);
+
+        // terminal.flush()
+        terminal.getClass().getMethod("flush").invoke(terminal);
+      }
+      catch (Exception e) {} // ignore
+      return this;
     }
 
     public String prompt(String msg)
@@ -147,6 +280,7 @@ public abstract class EnvConsole
       }
     }
 
+    private Object terminal;      // org.jline.terminal.Terminal
     private Object reader;        // org.jline.reader.LineReader
     private Method readLine;      // readLine(String)
     private Method readLineMask;  // readLine(String,Character)
@@ -156,7 +290,7 @@ public abstract class EnvConsole
 // Jline3Console
 //////////////////////////////////////////////////////////////////////////
 
-  static class Jline2Console extends EnvConsole
+  static class Jline2Console extends NativeConsole
   {
     Jline2Console() throws Exception
     {

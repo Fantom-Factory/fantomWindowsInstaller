@@ -52,6 +52,11 @@ class LocalFile extends File {
       }
       instance.#node_os_path = url.fileURLToPath(uriStr).split(path.sep).join(path.posix.sep);
     }
+    else if (instance.#node_os_path.startsWith("file://")) {
+      // need to ensure that even on unix we remove the file scheme so
+      // various node functions will work.
+      instance.#node_os_path = url.fileURLToPath(instance.#node_os_path);
+    }
 
     return instance;
   }
@@ -96,7 +101,12 @@ class LocalFile extends File {
   isWritable() { return this.#checkAccess(node.fs.constants.W_OK); }
   isExecutable() { return this.#checkAccess(node.fs.constants.X_OK); }
 
-  osPath() { return this.#node_os_path; }
+  // NOTE: to be consistent with java, directories should not include trailing slash
+  osPath() {
+    let p = this.#node_os_path;
+    if (p.endsWith("/")) p = p.slice(0,-1);
+    return p
+  }
 
   parent() {
     const parent = this.uri().parent();
@@ -269,6 +279,8 @@ class LocalFile extends File {
   out(append=false, bufSize=4096) {
     if (this.__isDirectory())
       throw IOErr.make("cannot get out stream for a directory");
+    if (!this.exists())
+      this.create();
 
     const flag = append ? 'a' : 'w';
     const fd = node.fs.openSync(this.#node_os_path, flag);

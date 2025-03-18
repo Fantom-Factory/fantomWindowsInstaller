@@ -10,6 +10,24 @@ const toDir = function(f) {
   return f;
 };
 
+// check if we are using PathEnv
+const checkPathEnv = async function() {
+  const util = await import('./util.js');
+  let dir = sys.File.os("./").normalize();
+  while (dir)
+  {
+    let fanFile = dir.plus("fan.props");
+    if (fanFile.exists())
+    {
+      let pathEnv = util.PathEnv.makeProps(fanFile);
+      sys.Env.cur(pathEnv);
+      break
+    }
+
+    dir = dir.parent();
+  }
+}
+
 // Supported options:
 // - polyfill: list of libraries to polyfill. The following libraries
 //   are supported:
@@ -17,20 +35,28 @@ const toDir = function(f) {
 //   be available in the node path.
 const boot = async function(opts={}) {
   const {Env, File,} = sys;
+    const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
   // find Fantom home dir
+  const node_path = path.resolve(url.fileURLToPath(import.meta.url), "../..");
   let fan_home = opts["FAN_HOME"] ?? process.env["FAN_HOME"];
   if (!fan_home) {
-    // assumes that fantom.js is in <fan_home>/lib/es/esm/
-    const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
-    fan_home = path.resolve(__dirname, "../../../");
+    // default fan_home is the same as node_path
+    fan_home = node_path;
   }
+  else fan_home = path.resolve(fan_home);
   fan_home = toDir(fan_home);
 
-  // init sys.Env
+  // init sys.BootEnv
   Env.cur().__homeDir = File.os(fan_home);
   Env.cur().__workDir = File.os(fan_home);
   Env.cur().__tempDir = File.os(toDir(path.resolve(fan_home, "temp")));
+  Env.cur().__loadVars({
+    "node.version": process.versions.node,
+    "node.path": node_path
+  });
+
+  await checkPathEnv();
 
   // handle polyfills
   for (const lib of (opts["polyfill"] ?? [])) {
@@ -39,7 +65,7 @@ const boot = async function(opts={}) {
   }
 
   // import all pods
-  const modules = path.resolve(fan_home, "lib/es/esm");
+  const modules = __dirname;
   for (const fan_module of fs.readdirSync(modules)) {
     if (path.extname(fan_module) == ".ts") continue;
     if (fan_module.startsWith("fan_")) continue;

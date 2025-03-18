@@ -446,12 +446,23 @@ abstract class BuildPod : BuildScript
     {
       c := Compiler(ci)
       c.frontend
+
       esmDir := Env.cur.homeDir.plus(`lib/es/esm/`)
+      if (Env.cur.vars.containsKey("FAN_ESM_DIR"))
+        esmDir = Env.cur.vars["FAN_ESM_DIR"].toUri.toFile
+
       Env.cur.homeDir.plus(`lib/js/node_modules/${podName}.js`).out.writeChars(c.js).flush.close
       if (c.esm != null)
+      {
         esmDir.plus(`${podName}.js`).out.writeChars(c.esm).flush.close
-      if (c.tsDecl != null)
-        esmDir.plus(`${podName}.d.ts`).out.writeChars(c.tsDecl).flush.close
+
+        // write ts declarations
+        t := Type.find("nodeJs::GenTsDecl", false)
+        if (t == null) return
+        decl := esmDir.plus(`${podName}.d.ts`).out
+        t.make([decl, c.pod, ["allTypes":true]])->run
+        decl.flush.close
+      }
     }
     catch (CompilerErr err)
     {
