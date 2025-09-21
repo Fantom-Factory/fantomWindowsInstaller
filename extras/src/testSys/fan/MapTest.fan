@@ -1162,14 +1162,16 @@ class MapTest : Test
 
   Void testAssignOps()
   {
+    __noJava := true
+
     x := ["one":1, "two":2, "three":3]
 
     t := x["two"]++
     verifyEq(t, 2)
     verifyEq(x["two"], 3)
 
-    t = ++x["two"]
-    verifyEq(t, 4)
+    Obj y := ++x["two"]
+    verifyEq(y, 4)
     verifyEq(x["two"], 4);
 
     ++x["two"]
@@ -1330,6 +1332,17 @@ class MapTest : Test
   }
 
 //////////////////////////////////////////////////////////////////////////
+// Swizzle
+//////////////////////////////////////////////////////////////////////////
+
+  Void testSwizzles()
+  {
+    // verify slot reflection swizzles
+    verifyEq(["a":1, "b":2]->size, 2)
+    verifyEq(["a":1, "b":2]->clear, Str:Int[:])
+  }
+
+//////////////////////////////////////////////////////////////////////////
 // Collisions
 //////////////////////////////////////////////////////////////////////////
 
@@ -1371,6 +1384,7 @@ class MapTest : Test
     verifyEq(m[b], "b")
     verifyEq(m[d], "d")
   }
+
 }
 
 @Js

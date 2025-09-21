@@ -134,7 +134,7 @@ class GenTsDecl
     out.print("export ${abstr}class $type.name$classParams $extends{\n")
 
     hasItBlockCtor := type.ctors.any |CMethod m->Bool| {
-      m.params.any |CParam p->Bool| { p.paramType.isFunc }
+      m.params.any |CParam p->Bool| { p.type.isFunc }
     }
 
     // keep track of slot names we've written. only mixin slots that have
@@ -227,7 +227,7 @@ class GenTsDecl
   {
     name := JsNode.methodToJs(field.name)
     staticStr := field.isStatic ? "static " : ""
-    typeStr := getJsType(field.fieldType, field.isStatic ? parent : null)
+    typeStr := getJsType(field.type, field.isStatic ? parent : null)
 
     printDoc(field, 2)
 
@@ -267,14 +267,14 @@ class GenTsDecl
     paramName := JsNode.pickleName(p.name, deps)
     if (p.hasDefault)
       paramName += "?"
-    paramType := toMethodSigType(method, p.paramType, isStatic ? parent : null)
+    paramType := toMethodSigType(method, p.type, isStatic ? parent : null)
 
     return "${paramName}: ${paramType}"
   }
 
   private Str toMethodReturn(CType type, CMethod method)
   {
-    output := method.isCtor ? type.name : toMethodSigType(method, method.returnType, pmap.containsKey(type.signature) ? type : null)
+    output := method.isCtor ? type.name : toMethodSigType(method, method.returns, pmap.containsKey(type.signature) ? type : null)
     if (method.qname == "sys::Obj.toImmutable" ||
         method.qname == "sys::List.ro" ||
         method.qname == "sys::Map.ro")

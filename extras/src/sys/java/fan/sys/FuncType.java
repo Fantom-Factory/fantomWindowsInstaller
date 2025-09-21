@@ -18,7 +18,7 @@ import fanx.emit.*;
 /**
  * FuncType is a parameterized type for Funcs
  */
-public class FuncType
+class FuncType
   extends GenericType
 {
 
@@ -112,6 +112,10 @@ public class FuncType
     return map.set("R", ret).ro();
   }
 
+  boolean isFunc() { return true; }
+
+  int funcArity() { return params.length; }
+
   public Class toClass() { return Func.class; }
 
 //////////////////////////////////////////////////////////////////////////
@@ -150,3 +154,4 @@ public class FuncType
   private String sig;
   private boolean genericParameterType;
 }
+

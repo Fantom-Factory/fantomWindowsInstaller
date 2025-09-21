@@ -36,7 +36,9 @@ public abstract class Future
 // Obj
 //////////////////////////////////////////////////////////////////////////
 
-  public Type typeof()
+  public Type typeof() { return typeof$(); }
+
+  public static Type typeof$()
   {
     if (type == null) type = Type.find("concurrent::Future");
     return type;
@@ -60,8 +62,8 @@ public abstract class Future
   public Future waitFor() { return waitFor(null); }
   public abstract Future waitFor(Duration timeout);
 
-  public static final void waitForAll(List list) { waitForAll(list, null); }
-  public static final void waitForAll(List list, Duration timeout)
+  public static final void waitForAll(List<Future> list) { waitForAll(list, null); }
+  public static final void waitForAll(List<Future> list, Duration timeout)
   {
     if (timeout == null)
     {

@@ -22,6 +22,7 @@ class TypeDef : DefNode, CType
   {
     this.ns          = ns
     this.pod         = unit.pod
+    this.podDef      = unit.pod
     this.unit        = unit
     this.name        = name
     this.qname       = pod.name + "::" + name
@@ -60,6 +61,22 @@ class TypeDef : DefNode, CType
   Bool isClosure()
   {
     return closure != null
+  }
+
+  **
+  ** Does this class have any native slots (false if entire class is native)
+  **
+  once Bool hasNativePeer()
+  {
+    slotDefs.any |x| { x.isNative }
+  }
+
+  **
+  ** Does this class have any it block constructors
+  **
+  once Bool hasItBlockCtor()
+  {
+    slotDefs.any |x| { x is MethodDef && ((MethodDef)x).isItBlockCtor }
   }
 
 //////////////////////////////////////////////////////////////////////////
@@ -224,7 +241,7 @@ class TypeDef : DefNode, CType
   **
   ** Return FieldDef for specified name or null.
   **
-  FieldDef? fieldDef (Str name)
+  FieldDef? fieldDef(Str name)
   {
     return (FieldDef)slotDefMap[name]
   }
@@ -351,6 +368,7 @@ class TypeDef : DefNode, CType
 
   override CNamespace ns           // compiler's namespace
   CompilationUnit unit             // parent unit
+  PodDef podDef                    // pod as PodDef
   override CPod pod                // parent pod
   override const Str name          // simple class name
   override const Str qname         // podName::name
@@ -367,3 +385,4 @@ class TypeDef : DefNode, CType
   FacetDef[]? indexedFacets        // used by WritePod
 
 }
+

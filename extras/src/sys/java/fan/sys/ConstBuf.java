@@ -191,6 +191,11 @@ public final class ConstBuf
     return ByteBuffer.wrap(safeArray());
   }
 
+  public InputStream javaIn()
+  {
+    return new ByteArrayInputStream(buf, off, size);
+  }
+
   static final Err err()
   {
     return ReadonlyErr.make("Buf is immutable");
@@ -242,6 +247,12 @@ public final class ConstBuf
       this.buf  = buf;
       this.off  = off;
       this.size = size;
+    }
+
+    public long avail()
+    {
+      if (numRead >= size) return 0;
+      return size - numRead;
     }
 
     public Long read() { int n = r(); return n < 0 ? null : FanInt.pos[n]; }

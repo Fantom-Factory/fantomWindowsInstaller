@@ -123,9 +123,9 @@ abstract const class File
   Str? ext()
 
   **
-  ** Convenience for [uri.mimeType]`Uri.mimeType`.
+  ** Default implementation is convenience for [uri.mimeType]`Uri.mimeType`.
   **
-  MimeType? mimeType()
+  virtual MimeType? mimeType()
 
 //////////////////////////////////////////////////////////////////////////
 // Access
@@ -403,12 +403,25 @@ abstract const class File
   abstract InStream in(Int? bufferSize := 4096)
 
   **
+  ** Read the file's input stream using a callback. The input stream
+  ** is guaranteed to be closed when the callback exits.
+  **
+  ** The method returns the value returned by the callback.
+  **
+  virtual Obj? withIn(|InStream->Obj?| f)
+
+  **
   ** Open a new buffered OutStream used to write to this file.  If append is
   ** true, then we open the file to append to the end, otherwise it is
   ** opened as an empty file.  A bufferSize of null or zero will return an
   ** unbuffered output stream.  Throw IOErr on error.
   **
   abstract OutStream out(Bool append := false, Int? bufferSize := 4096)
+
+  **
+  ** Write to the file's output stream using a callback. The output stream
+  ** is guaranteed to be closed when the callback exits.
+  virtual Void withOut(|OutStream| f)
 
   **
   ** Convenience for [in.readAllBuf]`InStream.readAllBuf`.

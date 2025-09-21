@@ -16,10 +16,10 @@ class ParamDef : Node, CParam
 // Construction
 //////////////////////////////////////////////////////////////////////////
 
-  new make(Loc loc, CType paramType, Str name, Expr? def := null)
+  new make(Loc loc, CType type, Str name, Expr? def := null)
     : super(loc)
   {
-    this.paramType = paramType
+    this.type = type
     this.name = name
     this.def  = def
   }
@@ -30,18 +30,22 @@ class ParamDef : Node, CParam
 
   override Bool hasDefault() { def != null }
 
+  ** Does this param have a def that uses an assign store instruction
+  ** because CheckParamDefs detected it used previous parameters
+  Bool isAssign() { def != null && def.id === ExprId.assign }
+
 //////////////////////////////////////////////////////////////////////////
 // Debug
 //////////////////////////////////////////////////////////////////////////
 
   override Str toStr()
   {
-    return "$paramType $name"
+    return "$type $name"
   }
 
   override Void print(AstWriter out)
   {
-    out.w(paramType).w(" ").w(name)
+    out.w(type).w(" ").w(name)
     if (def != null) { out.w(" := "); def.print(out) }
   }
 
@@ -49,8 +53,9 @@ class ParamDef : Node, CParam
 // Fields
 //////////////////////////////////////////////////////////////////////////
 
-  override CType paramType   // type of parameter
+  override CType type        // type of parameter
   override Str name          // local variable name
   Expr? def                  // default expression
 
 }
+

@@ -442,8 +442,10 @@ class StreamTest : Test
     out.writeChar(0xf6)
     out.writeChar(0xabcd)
     out.write(0x33)
+    out.writeChars("😁")
+    out.writeChar('\u{1f44d}')
     out.close
-    verifyEq(f.size, 18)
+    verifyEq(f.size, 26)
 
     // read file back in
     in := f.in(0)
@@ -464,14 +466,18 @@ class StreamTest : Test
     verifyEq(in.peekChar, 0xabcd)
     verifyEq(in.readChar, 0xabcd)
     verifyEq(in.read,     0x33)
+    verifyEq(in.readChar, '\u{1f601}')
+    verifyEq(in.readChar, '\u{1f44d}')
     verifyEq(in.readChar, null)
     verifyEq(in.peekChar, null)
     verifyEq(in.read,     null)
     in.close
 
-    // test chars outside Java's range (emoji)
-    str := Buf.fromHex("666f6f20e299bff09f8e99206f6e20626172").readAllStr
-    verifyEq(str.toCode(null, true), Str<|foo \u267f\ufffd on bar|>)
+    // test chars outside Java's range (emoji) using unicode escape and character itself
+    str := "foo \u{1f601} bar"
+    verifyEq(str.toCode(null, true), Str<|foo \u{1f601} bar|>)
+    str = "foo 🥳 bar"
+    verifyEq(str.toCode(null, true), Str<|foo \u{1f973} bar|>)
   }
 
 //////////////////////////////////////////////////////////////////////////

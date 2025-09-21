@@ -50,17 +50,17 @@ class JavaField : JavaSlot, CField
   new make(CType parent, Str name, Int flags, CType type)
     : super(parent, name, flags)
   {
-    this.fieldType = type
+    this.type = type
   }
 
-  override This dup() { make(parent, name, flags, fieldType) }
+  override This dup() { make(parent, name, flags, type) }
 
-  override CType fieldType
+  override CType type
   override CMethod? getter
   override CMethod? setter
 
-  override Str signature() { return "$fieldType $name" }
-  override CType inheritedReturnType() { return fieldType }
+  override Str signature() { return "$type $name" }
+  override CType inheritedReturns() { type }
 
 }
 
@@ -76,19 +76,19 @@ class JavaMethod : JavaSlot, CMethod
   new make(CType parent, Str name, Int flags, CType ret, CParam[] params := [,])
     : super(parent, name, flags)
   {
-    this.returnType = ret
-    this.params = params
+    this.returns = ret
+    this.params  = params
   }
 
   override CType parent
-  override CType returnType
+  override CType returns
   override CParam[] params
   override Bool isGeneric
 
-  override This dup() { make(parent, name, flags, returnType, params) }
+  override This dup() { make(parent, name, flags, returns, params) }
 
-  override Str signature() { return "$returnType $name(" + params.join(",") + ")" }
-  override CType inheritedReturnType() { return returnType }
+  override Str signature() { return "$returns $name(" + params.join(",") + ")" }
+  override CType inheritedReturns() { return returns }
 
   Void setParamTypes(CType[] types)
   {
@@ -112,7 +112,7 @@ class JavaMethod : JavaSlot, CMethod
   {
     this.name == m.name &&
     this.params.size == m.params.size &&
-    this.params.all |p, i| { p.paramType == m.params[i].paramType }
+    this.params.all |p, i| { p.type == m.params[i].type }
   }
 }
 
@@ -125,10 +125,10 @@ class JavaMethod : JavaSlot, CMethod
 **
 class JavaParam : CParam
 {
-  new make(Str n, CType t) { name = n; paramType = t }
+  new make(Str n, CType t) { name = n; type = t }
   override Str name
   override Bool hasDefault
-  override CType paramType
-  override Str toStr() { return "$paramType $name" }
+  override CType type
+  override Str toStr() { return "$type $name" }
 }
 

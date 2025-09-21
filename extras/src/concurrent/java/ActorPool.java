@@ -50,7 +50,9 @@ public class ActorPool
 // Obj
 //////////////////////////////////////////////////////////////////////////
 
-  public Type typeof()
+  public Type typeof() { return typeof$(); }
+
+  public static Type typeof$()
   {
     if (type == null) type = Type.find("concurrent::ActorPool");
     return type;
@@ -108,7 +110,7 @@ public class ActorPool
     return super.trap(name, args);
   }
 
-  public Actor balance(List actors)
+  public Actor balance(List<Actor> actors)
   {
     Actor best = (Actor)actors.get(0);
     long bestSize = best.queueSize();
@@ -182,11 +184,25 @@ public class ActorPool
 // Fields
 //////////////////////////////////////////////////////////////////////////
 
+  public String name() { return name; }
+  public void name$init(Func f, String x) { name = x; }
+  public String name = "ActorPool";
+
+  public long maxThreads() { return maxThreads; }
+  public void maxThreads$init(Func f, long x) { maxThreads = x; }
+  public long maxThreads = 100;
+
+  public long maxQueue() { return maxQueue; }
+  public void maxQueue$init(Func f, long x) { maxQueue = x; }
+  public long maxQueue = 100_000_000;
+
+  public Duration maxTimeBeforeYield() { return maxTimeBeforeYield; }
+  public void maxTimeBeforeYield$init(Func f, Duration x) { maxTimeBeforeYield = x; }
+  public Duration maxTimeBeforeYield = Duration.oneSec;
+
   private ThreadPool threadPool;
   private Scheduler scheduler;
   volatile boolean killed;
-  public String name = "ActorPool";
-  public long maxThreads = 100;
-  public long maxQueue = 100_000_000;
-  public Duration maxTimeBeforeYield = Duration.oneSec;
+
 }
+

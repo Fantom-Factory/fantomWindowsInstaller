@@ -117,7 +117,7 @@ final class FPod : CPod, FConst
   {
     p := addTypeRef(field.parent)
     n := addName(field.name)
-    t := addTypeRef(field.fieldType)
+    t := addTypeRef(field.type)
     return fieldRefs.add(FFieldRef(p, n, t))
   }
 
@@ -131,8 +131,8 @@ final class FPod : CPod, FConst
 
     p := addTypeRef(method.parent)
     n := addName(method.name)
-    r := addTypeRef(method.inheritedReturnType.raw)  // CLR can't deal with covariance
-    Int[] params := method.params.map |CParam x->Int| { addTypeRef(x.paramType.raw) }
+    r := addTypeRef(method.inheritedReturns.raw)  // CLR can't deal with covariance
+    Int[] params := method.params.map |CParam x->Int| { addTypeRef(x.type.raw) }
     if (argCount != null && argCount < params.size)
       params = params[0..<argCount]
     return methodRefs.add(FMethodRef(p, n, r, params))
@@ -210,7 +210,18 @@ final class FPod : CPod, FConst
   **
   Void write(Zip zip := this.zip)
   {
-    this.zip = zip
+    doWrite |uri|
+    {
+      zip.writeNext(uri)
+    }
+  }
+
+  **
+  ** Write every fcode file in this pod
+  **
+  Void doWrite(|Uri->OutStream| onFile)
+  {
+    this.onFile = onFile
 
     // write pod meta, index props
     writeMeta(`/meta.props`)
@@ -239,6 +250,7 @@ final class FPod : CPod, FConst
 
     // write type full fcode
     ftypes.each |FType t| { t.write }
+    this.onFile = null
   }
 
   private Void writeMeta(Uri uri)
@@ -287,7 +299,7 @@ final class FPod : CPod, FConst
   **
   ** Get output stream to write the specified file to zip storage.
   **
-  OutStream out(Uri uri) { zip.writeNext(uri) }
+  OutStream out(Uri uri) { onFile(uri) }
 
 //////////////////////////////////////////////////////////////////////////
 // Fields
@@ -312,6 +324,7 @@ final class FPod : CPod, FConst
   FTable durations           // Duration literals
   FTable uris                // Uri literals
   [Str:FType]? ftypesByName  // if loaded
+  |Uri->OutStream|? onFile   // doWrite
 
 }
 

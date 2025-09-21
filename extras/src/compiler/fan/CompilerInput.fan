@@ -133,6 +133,24 @@ class CompilerInput
   **
   Bool docTests := false
 
+  **
+  ** Generate a unique wrapper type per parameterized List/Map.
+  ** By default we generate one acme::Wrap$List class per pod for all
+  ** List types. But when transpiling Java we need a different version
+  ** per parameterized List/Map.
+  **
+  Bool wrapperPerParameterizedCollectionType
+
+  **
+  ** Generate a type cast coercion between collections with different
+  ** parameterized types. For example normal Fantom we can use 'Str[]'
+  ** where 'Obj[]' it expected with no cast.  But when transpiling
+  ** Java, these must be explicitly cast. The compiler actually generates
+  ** a proper parameterized type cast such as 'Obj[]', but in Java this
+  ** isn't valid so we always just cast to the generic type 'List'.
+  **
+  Bool coerceParameterizedCollectionTypes
+
 //////////////////////////////////////////////////////////////////////////
 // CompilerInputMode.file
 //////////////////////////////////////////////////////////////////////////
@@ -237,3 +255,4 @@ enum class CompilerInputMode
   file,
   str
 }
+

@@ -23,7 +23,7 @@ class JsClosure : JsNode
   Void writeClosure(ClosureExpr ce)
   {
 
-    CType[] sigTypes := [,].addAll(ce.signature.params).add(ce.signature.ret)
+    CType[] sigTypes := [,].addAll(ce.signature.params).add(ce.signature.returns)
     isJs := sigTypes.all { !it.isForeign && checkJsSafety(it, loc) }
     if (isJs)
     {
@@ -63,13 +63,13 @@ class JsClosure : JsNode
     varToFunc.each |MethodDef func, Str var|
     {
       loc := func.loc
-      nullable := func.ret.isNullable ? ".toNullable()" : ""
-      js.w("const ${var} = [${qnameToJs(func.ret)}.type\$${nullable},")
+      nullable := func.returns.isNullable ? ".toNullable()" : ""
+      js.w("const ${var} = [${qnameToJs(func.returns)}.type\$${nullable},")
       js.w("sys.List.make(sys.Param.type\$, [")
       func.params.each |p,i|
       {
         if (i>0) js.w(",")
-        js.w("new sys.Param(${p.name.toCode}, ${p.paramType.signature.toCode}, ${p.hasDefault})")
+        js.w("new sys.Param(${p.name.toCode}, ${p.type.signature.toCode}, ${p.hasDefault})")
       }
       js.w("])")
         .w("];").nl
@@ -90,9 +90,9 @@ class JsClosure : JsNode
     buf := StrBuf()
     func.params.each |p|
     {
-      buf.add("${p.name}-${p.paramType.signature}-${p.hasDefault},")
+      buf.add("${p.name}-${p.type.signature}-${p.hasDefault},")
     }
-    buf.add("${func.ret.signature}")
+    buf.add("${func.returns.signature}")
     return buf.toStr
   }
 
@@ -102,3 +102,4 @@ class JsClosure : JsNode
   ** Func spec field variable name to prototype function (for params and return type)
   private Str:MethodDef varToFunc := [:] { ordered = true }
 }
+

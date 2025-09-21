@@ -21,7 +21,7 @@ public class Log
 // Construction
 //////////////////////////////////////////////////////////////////////////
 
-  public static List list()
+  public static List<Log> list()
   {
     synchronized (lock)
     {
@@ -189,7 +189,7 @@ public class Log
 // Handlers
 //////////////////////////////////////////////////////////////////////////
 
-  public static List handlers()
+  public static List<Func> handlers()
   {
     return new List(Sys.FuncType, handlers).ro();
   }
@@ -201,7 +201,7 @@ public class Log
 
     synchronized (lock)
     {
-      List temp = new List(Sys.FuncType, handlers).add(func);
+      List temp = new List(Sys.FuncType, handlers)._add(func);
       handlers = (Func[])temp.toArray(new Func[temp.sz()]);
     }
   }
@@ -242,3 +242,4 @@ public class Log
   private volatile LogLevel level = LogLevel.info;
 
 }
+

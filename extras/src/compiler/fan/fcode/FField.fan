@@ -47,18 +47,18 @@ class FField : FSlot, CField
 
   override Str signature()
   {
-    return "$fieldType $name"
+    return "$type $name"
   }
 
-  override CType fieldType()
+  override CType type()
   {
     return fparent.fpod.toType(typeRef)
   }
 
-  override CType inheritedReturnType()
+  override CType inheritedReturns()
   {
-    if (!isOverride || getter == null) return fieldType
-    else return getter.inheritedReturnType
+    if (!isOverride || getter == null) return type
+    else return getter.inheritedReturns
   }
 
 //////////////////////////////////////////////////////////////////////////

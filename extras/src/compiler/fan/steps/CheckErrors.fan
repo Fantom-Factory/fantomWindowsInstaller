@@ -34,6 +34,7 @@ class CheckErrors : CompilerStep
     : super(compiler)
   {
     this.isSys = compiler.isSys
+    this.coercer = Coercer(compiler)
   }
 
 //////////////////////////////////////////////////////////////////////////
@@ -234,11 +235,11 @@ class CheckErrors : CompilerStep
       err("Abstract field '$f.name' cannot have getter or setter", f.loc)
 
     // check internal type
-    checkTypeProtection(f.fieldType, f.loc)
+    checkTypeProtection(f.type, f.loc)
 
     // check that public field isn't using internal type
-    if (curType.isPublic && (f.isPublic || f.isProtected) && !f.fieldType.isPublic)
-      err("Public field '${curType.name}.${f.name}' cannot use internal type '$f.fieldType'", f.loc)
+    if (curType.isPublic && (f.isPublic || f.isProtected) && !f.type.isPublic)
+      err("Public field '${curType.name}.${f.name}' cannot use internal type '$f.type'", f.loc)
   }
 
   private Void checkFieldFlags(FieldDef f)
@@ -270,8 +271,8 @@ class CheckErrors : CompilerStep
       else if (flags.and(FConst.Virtual) != 0 && flags.and(FConst.Override) == 0) err("Invalid combination of 'const' and 'virtual' modifiers", loc)
 
       // invalid type
-      if (!f.fieldType.isConstFieldType)
-        err("Const field '$f.name' has non-const type '$f.fieldType'", loc)
+      if (!f.type.isConstFieldType)
+        err("Const field '$f.name' has non-const type '$f.type'", loc)
     }
     else
     {
@@ -337,17 +338,17 @@ class CheckErrors : CompilerStep
     // check types used in signature
     if (!m.isAccessor)
     {
-      checkTypeProtection(m.returnType, m.loc)
-      m.paramDefs.each |ParamDef p| { checkTypeProtection(p.paramType, p.loc) }
+      checkTypeProtection(m.returns, m.loc)
+      m.paramDefs.each |ParamDef p| { checkTypeProtection(p.type, p.loc) }
     }
 
     // check that public method isn't using internal types in its signature
     if (!m.isAccessor && curType.isPublic && (m.isPublic || m.isProtected))
     {
-      if (!m.returnType.isPublic) err("Public method '${curType.name}.${m.name}' cannot use internal type '$m.returnType'", m.loc);
+      if (!m.returns.isPublic) err("Public method '${curType.name}.${m.name}' cannot use internal type '$m.returns'", m.loc);
       m.paramDefs.each |ParamDef p|
       {
-        if (!p.paramType.isPublic) err("Public method '${curType.name}.${m.name}' cannot use internal type '$p.paramType'", m.loc);
+        if (!p.type.isPublic) err("Public method '${curType.name}.${m.name}' cannot use internal type '$p.type'", m.loc);
       }
     }
   }
@@ -433,7 +434,7 @@ class CheckErrors : CompilerStep
   private Void checkParam(ParamDef p)
   {
     // check type
-    t := p.paramType
+    t := p.type
     if (t.isVoid) { err("Cannot use Void as parameter type", p.loc); return }
     if (t.isThis)  { err("Cannot use This as parameter type", p.loc); return }
     func := t.deref.toNonNullable as FuncType
@@ -443,19 +444,19 @@ class CheckErrors : CompilerStep
       checkValidType(p.loc, t)
 
     // check parameter default type
-    if (p.def != null && !p.paramType.isGenericParameter)
+    if (p.def != null && !p.type.isGenericParameter)
     {
-      p.def = coerce(p.def, p.paramType) |->|
+      p.def = coerce(p.def, p.type) |->|
       {
-        err("'$p.def.toTypeStr' is not assignable to '$p.paramType'", p.def.loc)
+        err("'$p.def.toTypeStr' is not assignable to '$p.type'", p.def.loc)
       }
     }
   }
 
   private Void checkParamFuncType(ParamDef param, FuncType t)
   {
-    if (!t.ret.isVoid && !t.ret.isValid)
-      err("Invalid return type '$t.ret' in func type of param '$param.name'", param.loc)
+    if (!t.returns.isVoid && !t.returns.isValid)
+      err("Invalid return type '$t.returns' in func type of param '$param.name'", param.loc)
 
     // This type is allowed in func params as a co-variant position
     t.params.each |p|
@@ -467,17 +468,17 @@ class CheckErrors : CompilerStep
 
   private Void checkMethodReturn(MethodDef m)
   {
-    if (m.ret.isThis)
+    if (m.returns.isThis)
     {
       if (m.isStatic)
         err("Cannot return This from static method", m.loc)
 
-      if (m.ret.isNullable)
+      if (m.returns.isNullable)
         err("This type cannot be nullable", m.loc)
     }
 
-    if (!m.ret.isThis && !m.ret.isVoid)
-      checkValidType(m.loc, m.ret)
+    if (!m.returns.isThis && !m.returns.isVoid)
+      checkValidType(m.loc, m.returns)
   }
 
   private Void checkInstanceCtor(MethodDef m)
@@ -514,7 +515,7 @@ class CheckErrors : CompilerStep
       f.isStatic == isStaticInit &&
       !f.isAbstract && !f.isNative && f.isStorage &&
       (!f.isOverride || f.concreteBase == null) &&
-      !f.fieldType.isNullable && !f.fieldType.isVal && f.init == null
+      !f.type.isNullable && !f.type.isVal && f.init == null
     }
     if (fields.isEmpty) return
 
@@ -566,10 +567,10 @@ class CheckErrors : CompilerStep
     if (prefix == null) { err("Operator method '$m.name' has invalid name", m.loc); return }
     op := ShortcutOp.fromPrefix(prefix)
 
-    if (m.name == "add" && !m.returnType.isThis && !isSys)
+    if (m.name == "add" && !m.returns.isThis && !isSys)
       err("Operator method '$m.name' must return This", m.loc)
 
-    if (m.returnType.isVoid && op !== ShortcutOp.set)
+    if (m.returns.isVoid && op !== ShortcutOp.set)
       err("Operator method '$m.name' cannot return Void", m.loc)
 
     if (m.params.size+1 != op.degree && !(m.params.getSafe(op.degree-1)?.hasDefault ?: false))
@@ -620,15 +621,15 @@ class CheckErrors : CompilerStep
       // if null literal
       if (val.id == ExprId.nullLiteral)
       {
-        if (!field.fieldType.isNullable)
-          err("Cannot assign null to non-nullable facet field '$name': '$field.fieldType'", val.loc)
+        if (!field.type.isNullable)
+          err("Cannot assign null to non-nullable facet field '$name': '$field.type'", val.loc)
       }
 
       // otherwise check field type (no coersion allowed)
       else
       {
-        if (!val.ctype.fits(field.fieldType.inferredAs))
-          err("Invalid type for facet field '$name': expected '$field.fieldType' not '$val.ctype'", val.loc)
+        if (!val.ctype.fits(field.type.inferredAs))
+          err("Invalid type for facet field '$name': expected '$field.type' not '$val.ctype'", val.loc)
       }
     }
   }
@@ -756,7 +757,7 @@ class CheckErrors : CompilerStep
 
   private Void checkReturn(ReturnStmt stmt)
   {
-    ret := curMethod.ret
+    ret := curMethod.returns
     if (stmt.expr == null)
     {
       // this is just a sanity check - it should be caught in parser
@@ -776,6 +777,11 @@ class CheckErrors : CompilerStep
     }
     else
     {
+      // if this a covariant override of a parameterized collection,
+      // we might need to cast it to the inheritedReturn
+      if (curMethod.isCovariant && needParameterizedCollectionCoerce(ret))
+        ret = curMethod.inheritedReturns
+
       stmt.expr = coerce(stmt.expr, ret) |->|
       {
         err("Cannot return '$stmt.expr.toTypeStr' as '$ret'", stmt.expr.loc)
@@ -1080,7 +1086,7 @@ class CheckErrors : CompilerStep
     if (shortcut.isAssign)
     {
       lhs := shortcut.target
-      ret := shortcut.method.returnType
+      ret := shortcut.method.returns
 
       // check that lhs is assignable
       if (!lhs.isAssignable)
@@ -1175,7 +1181,7 @@ class CheckErrors : CompilerStep
     // any other errors should already be logged at this point (see isConstFieldType)
 
     // if non-const make an implicit call toImmutable
-    ftype := field.fieldType
+    ftype := field.type
     if (ftype.isConst)
       return rhs
     else
@@ -1188,7 +1194,8 @@ class CheckErrors : CompilerStep
     if (rhs.id == ExprId.nullLiteral) return rhs
 
     // wrap existing assigned with call toImmutable
-    call := CallExpr.makeWithMethod(rhs.loc, rhs, ns.objToImmutable) { isSafe = true }
+    call := CallExpr.makeWithMethod(rhs.loc, rhs, ns.objToImmutable)
+    call.isSafe = fieldType.isNullable
     if (fieldType.toNonNullable.isObj) return call
     return TypeCheckExpr.coerce(call, fieldType)
 
@@ -1202,11 +1209,11 @@ class CheckErrors : CompilerStep
       warn("Using static method '$call.method.qname' as constructor", call.loc)
 
       // check that ctor method is the expected type
-      if (call.ctype.toNonNullable != call.method.returnType.toNonNullable)
+      if (call.ctype.toNonNullable != call.method.returns.toNonNullable)
         err("Construction method '$call.method.qname' must return '$call.ctype.name'", call.loc)
 
       // but allow ctor to be typed as nullable
-      call.ctype = call.method.returnType
+      call.ctype = call.method.returns
     }
 
     checkCall(call)
@@ -1237,15 +1244,15 @@ class CheckErrors : CompilerStep
     if (m.isForeign)
     {
       // just log one use of unsupported return or param type and return
-      if (!m.returnType.isSupported)
+      if (!m.returns.isSupported)
       {
-        err("Method '$name' uses unsupported type '$m.returnType'", call.loc)
+        err("Method '$name' uses unsupported type '$m.returns'", call.loc)
         return
       }
-      unsupported := m.params.find |CParam p->Bool| { !p.paramType.isSupported }
+      unsupported := m.params.find |CParam p->Bool| { !p.type.isSupported }
       if (unsupported != null)
       {
-        err("Method '$name' uses unsupported type '$unsupported.paramType'", call.loc)
+        err("Method '$name' uses unsupported type '$unsupported.type'", call.loc)
         return
       }
     }
@@ -1344,9 +1351,9 @@ class CheckErrors : CompilerStep
     checkSlotProtection(field, f.loc)
 
     // if a FFI, then verify we aren't using unsupported types
-    if (!field.fieldType.isSupported)
+    if (!field.type.isSupported)
     {
-      err("Field '$field.name' has unsupported type '$field.fieldType'", f.loc)
+      err("Field '$field.name' has unsupported type '$field.type'", f.loc)
       return
     }
 
@@ -1575,7 +1582,7 @@ class CheckErrors : CompilerStep
         else
         {
           // ensure arg fits parameter type (or auto-cast)
-          pt := p.paramType.parameterizeThis(base)
+          pt := p.type.parameterizeThis(base)
           newArgs[i] = coerce(args[i], pt) |->|
           {
             isErr = name != "compare" // TODO let anything slide for Obj.compare
@@ -1584,7 +1591,7 @@ class CheckErrors : CompilerStep
           // if this a parameterized generic, then we need to box
           // even if the expected type is a value-type (since the
           // actual implementation methods are all Obj based)
-          if (!isErr && genericParams != null && genericParams[i].paramType.isGenericParameter)
+          if (!isErr && genericParams != null && genericParams[i].type.isGenericParameter)
             newArgs[i] = box(newArgs[i])
         }
       }
@@ -1607,7 +1614,7 @@ class CheckErrors : CompilerStep
 
   internal static Str paramTypeStr(CType base, CParam param)
   {
-    return param.paramType.parameterizeThis(base).inferredAs.signature
+    return param.type.parameterizeThis(base).inferredAs.signature
   }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1670,7 +1677,7 @@ class CheckErrors : CompilerStep
       else
       {
         x := (FuncType)t
-        checkTypeProtection(x.ret, loc)
+        checkTypeProtection(x.returns, loc)
         x.params.each |CType p| { checkTypeProtection(p, loc) }
       }
     }
@@ -1767,10 +1774,7 @@ class CheckErrors : CompilerStep
   **
   private Expr box(Expr expr)
   {
-    if (expr.ctype.isVal)
-      return TypeCheckExpr.coerce(expr, ns.objType.toNullable)
-    else
-      return expr
+    coercer.box(expr)
   }
 
   **
@@ -1778,142 +1782,16 @@ class CheckErrors : CompilerStep
   **
   private Expr coerceBoxed(Expr expr, CType expected, |->| onErr)
   {
-    return box(coerce(expr, expected, onErr))
-  }
-
-  **
-  ** Return if `coerce` would not report a compiler error.
-  **
-  static Bool canCoerce(Expr expr, CType expected)
-  {
-    ok := true
-    coerce(expr, expected) |->| { ok = false }
-    return ok
+    coercer.coerceBoxed(expr, expected, onErr)
   }
 
   **
   ** Coerce the target expression to the specified type.  If
   ** the expression is not type compatible run the onErr function.
   **
-  static Expr coerce(Expr expr, CType expected, |->| onErr)
+  private Expr coerce(Expr expr, CType expected, |->| onErr)
   {
-    // route to bridge for FFI coercion if either side if foreign
-    if (expected.isForeign) return expected.bridge.coerce(expr, expected, onErr)
-    if (expr.ctype.isForeign) return expr.ctype.bridge.coerce(expr, expected, onErr)
-
-    // normal Fantom coercion behavior
-    return doCoerce(expr, expected, onErr)
-  }
-
-  **
-  ** Coerce the target expression to the specified type.  If
-  ** the expression is not type compatible run the onErr function.
-  ** Default Fantom behavior.
-  **
-  static Expr doCoerce(Expr expr, CType expected, |->| onErr)
-  {
-    // sanity check that expression has been typed
-    CType actual := expr.ctype
-    if ((Obj?)actual == null) throw NullErr("null ctype: ${expr}")
-
-    // if the same type this is easy
-    if (actual == expected) return expr
-
-    // if actual type is nothing, then its of no matter
-    if (actual.isNothing) return expr
-
-    // we can never use a void expression
-    if (actual.isVoid || expected.isVoid)
-    {
-      onErr()
-      return expr
-    }
-
-    // if expr is always nullable (null literal, safe invoke, as),
-    // then verify expected type is nullable
-    if (expr.isAlwaysNullable)
-    {
-      if (!expected.isNullable) { onErr(); return expr }
-
-      // null literals don't need cast to nullable types,
-      // otherwise // fall-thru to apply coercion
-      if (expr.id === ExprId.nullLiteral) return expr
-    }
-
-    // if the expression fits to type, that is ok
-    if (actual.fits(expected))
-    {
-      // if we have any nullable/value difference we need a coercion
-      if (needCoerce(actual, expected))
-        return TypeCheckExpr.coerce(expr, expected)
-      else
-        return expr
-    }
-
-    // if we can auto-cast to make the expr fit then do it - we
-    // have to treat function auto-casting a little specially here
-    if (actual.isFunc && expected.isFunc)
-    {
-      if (isFuncAutoCoerce(actual, expected))
-        return TypeCheckExpr.coerce(expr, expected)
-    }
-    else
-    {
-      if (expected.fits(actual))
-        return TypeCheckExpr.coerce(expr, expected)
-    }
-
-    // we have an error condition
-    onErr()
-    return expr
-  }
-
-  static Bool isFuncAutoCoerce(CType actualType, CType expectedType)
-  {
-    // check if both are function types
-    if (!actualType.isFunc || !expectedType.isFunc) return false
-    actual   := actualType.toNonNullable as FuncType
-    expected := expectedType.toNonNullable as FuncType
-
-    // auto-cast to or from unparameterized 'sys::Func'
-    if (actual == null || expected == null) return true
-
-    // if actual function requires more parameters than
-    // we are expecting, then this cannot be a match
-    if (actual.arity > expected.arity) return false
-
-    // check return type
-    if (!isFuncAutoCoerceMatch(actual.ret, expected.ret))
-      return false
-
-    // check that each parameter is auto-castable
-    return actual.params.all |CType actualParam, Int i->Bool|
-    {
-      expectedParam := expected.params[i]
-      return isFuncAutoCoerceMatch(actualParam, expectedParam)
-    }
-
-    return true
-  }
-
-  static Bool isFuncAutoCoerceMatch(CType actual, CType expected)
-  {
-    if (actual.fits(expected)) return true
-    if (expected.fits(actual)) return true
-    if (isFuncAutoCoerce(actual, expected)) return true
-    return false
-  }
-
-  static Bool needCoerce(CType from, CType to)
-  {
-    // if either side is a value type and we got past
-    // the equals check then we definitely need a coercion
-    if (from.isVal || to.isVal) return true
-
-    // if going from Obj? -> Obj we need a nullable coercion
-    if (!to.isNullable) return from.isNullable
-
-    return false
+    coercer.coerce(expr, expected, onErr)
   }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1923,5 +1801,6 @@ class CheckErrors : CompilerStep
   private Int protectedRegionDepth := 0  // try statement depth
   private Int finallyDepth := 0          // finally block depth
   private Bool isSys
+  private Coercer coercer
 }
 

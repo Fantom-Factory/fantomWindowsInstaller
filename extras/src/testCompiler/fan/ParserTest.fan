@@ -331,7 +331,7 @@ class ParserTest : CompilerTest
     // Int a
     f := (FieldDef)t.fieldDefs[0]
     verifyEq(f.name, "a")
-    verifyEq(f.fieldType.qname, "sys::Int")
+    verifyEq(f.type.qname, "sys::Int")
     verifyEq(f.flags, FConst.Public.or(FConst.Storage))
     verifyEq(f.get.flags, FConst.Public.or(FConst.Synthetic).or(FConst.Getter))
     verifyEq(f.set.flags, FConst.Public.or(FConst.Synthetic).or(FConst.Setter))
@@ -342,7 +342,7 @@ class ParserTest : CompilerTest
     // Int b := 3
     f = (FieldDef)t.fieldDefs[1]
     verifyEq(f.name, "b")
-    verifyEq(f.fieldType.qname, "sys::Int")
+    verifyEq(f.type.qname, "sys::Int")
     verifyEq(f.flags, FConst.Private.or(FConst.Storage))
     verifyEq(f.get.flags, FConst.Private.or(FConst.Synthetic).or(FConst.Getter))
     verifyEq(f.set.flags, FConst.Private.or(FConst.Synthetic).or(FConst.Setter))
@@ -353,7 +353,7 @@ class ParserTest : CompilerTest
     // static Str c { get; private set }
     f = (FieldDef)t.fieldDefs[2]
     verifyEq(f.name, "c")
-    verifyEq(f.fieldType.qname, "sys::Str")
+    verifyEq(f.type.qname, "sys::Str")
     verifyEq(f.flags, FConst.Public.or(FConst.Static).or(FConst.Storage))
     verifyEq(f.get.flags, FConst.Public.or(FConst.Static).or(FConst.Synthetic).or(FConst.Getter))
     verifyEq(f.set.flags, FConst.Private.or(FConst.Static).or(FConst.Synthetic).or(FConst.Setter))
@@ -364,7 +364,7 @@ class ParserTest : CompilerTest
     // Int d := 0 { get {} set {} }
     f = (FieldDef)t.fieldDefs[3]
     verifyEq(f.name, "d")
-    verifyEq(f.fieldType.qname, "sys::Int")
+    verifyEq(f.type.qname, "sys::Int")
     verifyEq(f.flags, FConst.Public)
     verifyEq(f.get.flags, FConst.Public.or(FConst.Getter))
     verifyEq(f.set.flags, FConst.Public.or(FConst.Setter))
@@ -375,7 +375,7 @@ class ParserTest : CompilerTest
     // abstract Bool e
     f = (FieldDef)t.fieldDefs[4]
     verifyEq(f.name, "e")
-    verifyEq(f.fieldType.qname, "sys::Bool")
+    verifyEq(f.type.qname, "sys::Bool")
     verifyEq(f.flags, FConst.Public.or(FConst.Abstract).or(FConst.Virtual))
     verifyEq(f.get.flags, FConst.Public.or(FConst.Abstract).or(FConst.Virtual).or(FConst.Synthetic).or(FConst.Getter))
     verifyEq(f.set.flags, FConst.Public.or(FConst.Abstract).or(FConst.Virtual).or(FConst.Synthetic).or(FConst.Setter))
@@ -442,7 +442,7 @@ class ParserTest : CompilerTest
     m := (MethodDef)t.slotDefs[n++]
     verifyEq(m.name, "make")
     verifyEq(m.flags, FConst.Public.or(FConst.Ctor))
-    verifyEq(m.ret.qname, "sys::Void")
+    verifyEq(m.returns.qname, "sys::Void")
     verifyEq(m.paramDefs.size, 0)
     verifyEq(m.ctorChain, null)
 
@@ -468,14 +468,14 @@ class ParserTest : CompilerTest
     m = (MethodDef)t.slotDefs[n++]
     verifyEq(m.name, "a")
     verifyEq(m.flags, FConst.Public)
-    verifyEq(m.ret.qname, "sys::Void")
+    verifyEq(m.returns.qname, "sys::Void")
     verifyEq(m.params.size, 0)
 
     // static Void b(Int x)
     m = (MethodDef)t.slotDefs[n++]
     verifyEq(m.name, "b")
     verifyEq(m.flags, FConst.Public.or(FConst.Static))
-    verifyEq(m.ret.qname, "sys::Void")
+    verifyEq(m.returns.qname, "sys::Void")
     verifyEq(m.params.size, 1)
     verifyParam(m.paramDefs[0], "sys::Int", "x")
 
@@ -483,7 +483,7 @@ class ParserTest : CompilerTest
     m = (MethodDef)t.slotDefs[n++]
     verifyEq(m.name, "c")
     verifyEq(m.flags, FConst.Internal)
-    verifyEq(m.ret.qname, "sys::Bool")
+    verifyEq(m.returns.qname, "sys::Bool")
     verifyEq(m.params.size, 2)
     verifyParam(m.paramDefs[0], "sys::Int", "x")
     verifyParam(m.paramDefs[1], "sys::Str", "y")
@@ -492,7 +492,7 @@ class ParserTest : CompilerTest
     m = (MethodDef)t.slotDefs[n++]
     verifyEq(m.name, "static\$init")
     verifyEq(m.flags, FConst.Private.or(FConst.Static).or(FConst.Synthetic))
-    verifyEq(m.ret.qname, "sys::Void")
+    verifyEq(m.returns.qname, "sys::Void")
     verifyEq(m.params.size, 0)
   }
 
@@ -524,7 +524,7 @@ class ParserTest : CompilerTest
 
   Void verifyParam(ParamDef p, Str typeName, Str name)
   {
-    verifyEq(p.paramType.qname, typeName)
+    verifyEq(p.type.qname, typeName)
     verifyEq(p.name, name)
   }
 
@@ -1294,7 +1294,7 @@ class ParserTest : CompilerTest
     parse("class Foo { Void m($typeStr x) {} }")
     m := (MethodDef)t.slotDefs.first
     // echo(" --> $m.params.first.ctype")
-    return m.paramDefs.first.paramType
+    return m.paramDefs.first.type
   }
 
   Void testBadTypes()
@@ -1439,3 +1439,4 @@ class ParserTest : CompilerTest
   ClosureExpr[]? closures  // compiler.closures
 
 }
+

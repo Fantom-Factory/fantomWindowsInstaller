@@ -72,7 +72,7 @@ public class Method
 
   public Type inheritedReturns() { return inheritedReturns; }
 
-  public List params() { return params.ro(); }
+  public List<Param> params() { return params.ro(); }
 
   public Func func() { return func; }
 
@@ -93,7 +93,7 @@ public class Method
   public Object trap(String name, List args)
   {
     // private undocumented access
-    if (name.equals("inheritedReturnType"))
+    if (name.equals("inheritedReturns"))
       return inheritedReturns;
     else
       return super.trap(name, args);
@@ -172,7 +172,7 @@ public class Method
     public Type returns() { return returns; }
     private final Type returns;
 
-    public long arity() { return params().size(); }
+    public long arity() { return params()._size(); }
 
     public List params()
     {
@@ -683,3 +683,4 @@ public class Method
   private int minParams = -1;
 
 }
+

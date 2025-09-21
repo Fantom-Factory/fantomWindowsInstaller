@@ -7,8 +7,11 @@
 //
 package fan.sql;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.sql.*;
 import fan.sys.*;
+import fan.util.FloatArray;
 
 public class SqlUtil
 {
@@ -37,6 +40,10 @@ public class SqlUtil
     rowType = t;
   }
 
+//////////////////////////////////////////////////////////////////////////
+// Fantom => Sql
+//////////////////////////////////////////////////////////////////////////
+
   /**
    * Get a JDBC Java object for the specified Fan object.
    */
@@ -60,22 +67,97 @@ public class SqlUtil
       fan.sys.Time t = (fan.sys.Time)value;
       jobj = new java.sql.Time((int)t.hour(), (int)t.min(), (int)t.sec());
     }
-    else if (value instanceof MemBuf)
+    // Stream via PreparedStatement.setBinaryStream()
+    else if (value instanceof Buf)
     {
-      jobj = ((MemBuf)value).bytes();
+      jobj = ((Buf)value).javaIn();
     }
-    // Support for Postgres text[] <--> Fantom Str[]
-    else if ((value instanceof List) && (((List) value).of().equals(Sys.StrType)))
+    // Support for converting Fantom Lists to Postgres arrays.
+    else if (value instanceof List)
     {
       List list = (List) value;
-      String[] arr = new String[(int)list.size()];
-      for (int i = 0; i < list.size(); i++)
-        arr[i] = list.get(i).toString();
-      jobj = arr;
+
+      FanListToArray conv = listToArray.get(list.of().toNonNullable());
+      if (conv == null)
+        throw SqlErr.make("Cannot create array from " + list.of());
+      return conv.toArray(list);
+    }
+    // Use FloatArray primitive array
+    else if (value instanceof FloatArray)
+    {
+      return ((FloatArray) value).array();
     }
 
     return jobj;
   }
+
+  //--------------------------------------------
+  // Convert a Fan List to a java Array
+  //--------------------------------------------
+
+  interface FanListToArray
+  {
+    Object[] toArray(List list);
+  }
+
+  static final FanListToArray toStringArray = (list) ->
+  {
+    String[] arr = new String[list.sz()];
+    for (int i = 0; i < list.sz(); i++)
+      arr[i] = (String) list.get(i);
+    return arr;
+  };
+
+  static final FanListToArray toLongArray = (list) ->
+  {
+    Long[] arr = new Long[list.sz()];
+    for (int i = 0; i < list.sz(); i++)
+      arr[i] = (Long) list.get(i);
+    return arr;
+  };
+
+  static final FanListToArray toBooleanArray = (list) ->
+  {
+    Boolean[] arr = new Boolean[list.sz()];
+    for (int i = 0; i < list.sz(); i++)
+      arr[i] = (Boolean) list.get(i);
+    return arr;
+  };
+
+  static final FanListToArray toDoubleArray = (list) ->
+  {
+    Double[] arr = new Double[list.sz()];
+    for (int i = 0; i < list.sz(); i++)
+      arr[i] = (Double) list.get(i);
+    return arr;
+  };
+
+  static final FanListToArray toTimestampArray = (list) ->
+  {
+    Timestamp[] arr = new Timestamp[list.sz()];
+    for (int i = 0; i < list.sz(); i++)
+    {
+      DateTime dt = (DateTime) list.get(i);
+      arr[i] = (dt == null) ? null : new Timestamp(dt.toJava());
+    }
+    return arr;
+  };
+
+  static final Map<Type, FanListToArray> listToArray;
+  static
+  {
+    listToArray = new HashMap<>();
+
+    listToArray.put(Sys.StrType,      toStringArray);
+    listToArray.put(Sys.IntType,      toLongArray);
+    listToArray.put(Sys.BoolType,     toBooleanArray);
+    listToArray.put(Sys.FloatType,    toDoubleArray);
+    listToArray.put(Sys.DateTimeType, toTimestampArray);
+  }
+
+//////////////////////////////////////////////////////////////////////////
+// Sql => Fantom
+//////////////////////////////////////////////////////////////////////////
 
   /**
    * Map an java.sql.Types code to a Fan type.
@@ -128,10 +210,6 @@ public class SqlUtil
         return null;
     }
   }
-
-//////////////////////////////////////////////////////////////////////////
-// Sql => Fantom
-//////////////////////////////////////////////////////////////////////////
 
   /**
    * Map an java.sql.ResultSet column to a Fantom object.
@@ -193,45 +271,45 @@ public class SqlUtil
       case Types.CHAR:
       case Types.VARCHAR:
       case Types.LONGVARCHAR:
-        return new ToFanStr();
+        return toFanStr;
 
       case Types.BIT:
-        return new ToFanBool();
+        return toFanBool;
 
       case Types.TINYINT:
       case Types.SMALLINT:
       case Types.INTEGER:
       case Types.BIGINT:
-        return new ToFanInt();
+        return toFanInt;
 
       case Types.REAL:
       case Types.FLOAT:
       case Types.DOUBLE:
-        return new ToFanFloat();
+        return toFanFloat;
 
       case Types.DECIMAL:
       case Types.NUMERIC:
-        return new ToFanDecimal();
+        return toFanDecimal;
 
       case Types.BINARY:
       case Types.VARBINARY:
       case Types.LONGVARBINARY:
-        return new ToFanBuf();
+        return toFanBuf;
 
       case Types.TIMESTAMP:
-        return new ToFanDateTime();
+        return toFanDateTime;
 
       case Types.DATE:
-        return new ToFanDate();
+        return toFanDate;
 
       case Types.TIME:
-        return new ToFanTime();
+        return toFanTime;
 
       case Types.ARRAY:
-        return new ToFanList();
+        return toFanList;
 
       default:
-        return new ToDefFanStr();
+        return toDefFanStr;
     }
   }
 
@@ -342,16 +420,22 @@ public class SqlUtil
     }
   }
 
-  // Support for Postgres text[] <--> Fantom Str[]
+  // Support for converting Postgres arrays to Fantom Lists.
   public static class ToFanList extends SqlToFan
   {
     public Object toObj(ResultSet rs, int col)
       throws SQLException
     {
-      String[] arr = (String[])
-        ((java.sql.Array) rs.getObject(col)).getArray();
+      Object obj = rs.getObject(col);
+      if (obj == null)
+        return null;
 
-      return new List(Sys.StrType, arr);
+      obj = ((java.sql.Array) obj).getArray();
+
+      ArrayToFanList conv = arrayToList.get(obj.getClass());
+      if (conv == null)
+        throw SqlErr.make("Cannot create List from " + obj);
+      return conv.toList(obj);
     }
   }
 
@@ -364,5 +448,155 @@ public class SqlUtil
     }
   }
 
+  public static final SqlToFan toFanStr      = new ToFanStr();
+  public static final SqlToFan toFanBool     = new ToFanBool();
+  public static final SqlToFan toFanInt      = new ToFanInt();
+  public static final SqlToFan toFanFloat    = new ToFanFloat();
+  public static final SqlToFan toFanDecimal  = new ToFanDecimal();
+  public static final SqlToFan toFanDateTime = new ToFanDateTime();
+  public static final SqlToFan toFanDate     = new ToFanDate();
+  public static final SqlToFan toFanTime     = new ToFanTime();
+  public static final SqlToFan toFanBuf      = new ToFanBuf();
+  public static final SqlToFan toFanList     = new ToFanList();
+  public static final SqlToFan toDefFanStr   = new ToDefFanStr();
+
+  //--------------------------------------------
+  // Convert a java Array to a Fan List
+  //--------------------------------------------
+
+  interface ArrayToFanList
+  {
+    List toList(Object obj);
+  }
+
+  static final ArrayToFanList toFanStringList = (obj) ->
+  {
+    String[] arr = (String[]) obj;
+    return List.make(
+      hasNull(arr) ?
+        Sys.StrType.toNullable() :
+        Sys.StrType,
+      arr);
+  };
+
+  static final ArrayToFanList toFanIntegerList = (obj) ->
+  {
+    // Copy the Integer[] over to a Long[]
+    Integer[] src = (Integer[]) obj;
+    Long[] dst = new Long[src.length];
+
+    boolean hasNull = false;
+    for (int i = 0; i < src.length; i++)
+    {
+      if (src[i] == null)
+        hasNull = true;
+      else
+        dst[i] = src[i].longValue();
+    }
+
+    return List.make(
+      hasNull ?
+        Sys.IntType.toNullable() :
+        Sys.IntType,
+      dst);
+  };
+
+  static final ArrayToFanList toFanLongList = (obj) ->
+  {
+    Long[] arr = (Long[]) obj;
+    return List.make(
+      hasNull(arr) ?
+        Sys.IntType.toNullable() :
+        Sys.IntType,
+      arr);
+  };
+
+  static final ArrayToFanList toFanBooleanList = (obj) ->
+  {
+    Boolean[] arr = (Boolean[]) obj;
+    return List.make(
+      hasNull(arr) ?
+        Sys.BoolType.toNullable() :
+        Sys.BoolType,
+      arr);
+  };
+
+  static final ArrayToFanList toFanFloatList = (obj) ->
+  {
+    // Copy the Float[] over to a Double[]
+    Float[] src = (Float[]) obj;
+    Double[] dst = new Double[src.length];
+
+    boolean hasNull = false;
+    for (int i = 0; i < src.length; i++)
+    {
+      if (src[i] == null)
+        hasNull = true;
+      else
+        dst[i] = src[i].doubleValue();
+    }
+
+    return List.make(
+      hasNull ?
+        Sys.FloatType.toNullable() :
+        Sys.FloatType,
+      dst);
+  };
+
+  static final ArrayToFanList toFanDoubleList = (obj) ->
+  {
+    Double[] arr = (Double[]) obj;
+    return List.make(
+      hasNull(arr) ?
+        Sys.FloatType.toNullable() :
+        Sys.FloatType,
+      arr);
+  };
+
+  static final ArrayToFanList toFanTimestampList = (obj) ->
+  {
+    // Copy the Timestamp[] over to a DateTime[]
+    Timestamp[] src = (Timestamp[]) obj;
+    DateTime[] dst = new DateTime[src.length];
+
+    boolean hasNull = false;
+    for (int i = 0; i < src.length; i++)
+    {
+      if (src[i] == null)
+        hasNull = true;
+      else
+        dst[i] = DateTime.fromJava(src[i].getTime());
+    }
+
+    return List.make(
+      hasNull ?
+        Sys.DateTimeType.toNullable() :
+        Sys.DateTimeType,
+      dst);
+  };
+
+  static boolean hasNull(Object[] arr)
+  {
+    for (int i = 0; i < arr.length; i++)
+    {
+      if (arr[i] == null)
+        return true;
+    }
+    return false;
+  }
+
+  static final Map<Class, ArrayToFanList> arrayToList;
+  static
+  {
+    arrayToList = new HashMap<>();
+
+    arrayToList.put(String[].class,    toFanStringList);
+    arrayToList.put(Integer[].class,   toFanIntegerList);
+    arrayToList.put(Long[].class,      toFanLongList);
+    arrayToList.put(Boolean[].class,   toFanBooleanList);
+    arrayToList.put(Float[].class,     toFanFloatList);
+    arrayToList.put(Double[].class,    toFanDoubleList);
+    arrayToList.put(Timestamp[].class, toFanTimestampList);
+  }
 }
 

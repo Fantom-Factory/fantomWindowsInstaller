@@ -5,7 +5,7 @@
 // History:
 //   15 Sep 05  Brian Frank  Creation
 //
-package fanx.test;
+package fan.testJava;
 
 import fan.sys.*;
 import fan.sys.TimeZone;
@@ -229,7 +229,7 @@ public class DateTimeTest
 
     void addYear(int year)
     {
-      Integer y = new Integer(year);
+      Integer y = Integer.valueOf(year);
       if (!years.contains(y)) years.add(y);
     }
 
@@ -252,3 +252,4 @@ public class DateTimeTest
   HashMap errors = new HashMap();
 
 }
+

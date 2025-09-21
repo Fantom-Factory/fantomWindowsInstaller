@@ -13,8 +13,12 @@
 ** pre>
 ** 'this is code'
 ** <pre
+** - Disables rendering of inline and block HTML nodes
 ** - Allows links to be specified in backticks, e.g. '`http://fantom.org`'
 ** - Enables the following extensions: `ImgAttrsExt`, and `TablesExt`
+** - Enables embedding videos in HTML using image links using video scheme links
+**   - ![alt text](video://youtu.be/abc?si=123)
+**   - ![alt text](video://loom/def?sid=456)
 **
 ** pre>
 ** parser := Xetodoc.parser |->LinkResolver| { MyCustomLinkResolver() }
@@ -58,7 +62,10 @@
   ** Get a `ParserBuilder` with all the standard Xetodoc features enabled.
   static ParserBuilder parserBuilder()
   {
-    Parser.builder.extensions(xetodoc)
+    Parser.builder
+      .withIncludeSourceSpans(IncludeSourceSpans.blocks_and_inlines)
+      .linkProcessor(VideoProcessor())
+      .extensions(xetodoc)
   }
 
   ** Convenience to render the given Xetodoc to HTML
@@ -76,7 +83,10 @@
   ** Get an `HtmlRendererBuilder` with all the standard Xetodoc features enabled.
   static HtmlRendererBuilder htmlBuilder()
   {
-    HtmlRenderer.builder.extensions(xetodoc)
+    HtmlRenderer.builder
+      .withDisableHtml
+      .nodeRendererFactory |cx->NodeRenderer| { VideoRenderer(cx) }
+      .extensions(xetodoc)
   }
 
   ** Convenience to render parsed AST back to Xetodoc markdown text
@@ -105,7 +115,9 @@
 
   override Void extendHtml(HtmlRendererBuilder builder)
   {
-    builder.extensions(exts)
+    builder
+      .attrProviderFactory |HtmlContext cx->AttrProvider| { HeadingAttrsProvider() }
+      .extensions(exts)
   }
 
   override Void extendMarkdown(MarkdownRendererBuilder builder)
@@ -116,33 +128,18 @@
   }
 }
 
-// **************************************************************************
-// ** FandocExt
-// **************************************************************************
+**************************************************************************
+** HeadingAttrsProvider
+**************************************************************************
 
-// **
-// ** The Fandoc extension modifies the parser so that single-ticks (') are the delimiter
-// ** for inline code (e.g. 'code'), and backticks can be used to create links,
-// ** (e.g. `http://fantom.org`)
-// **
-// ** This is nodoc extension that is used by `Xetodoc` to enable these features as
-// ** part of the suite of features enabled in that mode.
-// **
-// @Js
-// @NoDoc const class FandocExt : MarkdownExt
-// {
-//   override Void extendParser(ParserBuilder builder)
-//   {
-//     builder
-//       .customInlineContentParserFactory(TicksInlineParser.factory)
-//       .customInlineContentParserFactory(BackticksLinkParser.factory)
-//   }
-
-//   override Void extendMarkdown(MarkdownRendererBuilder builder)
-//   {
-//     builder.nodeRendererFactory(|cx->NodeRenderer| { MdTicksRenderer(cx) })
-//   }
-// }
+@Js
+internal class HeadingAttrsProvider : AttrProvider
+{
+  override Void setAttrs(Node node, Str tagName, [Str:Str?] attrs)
+  {
+    if (node is Heading) attrs["id"] = ((Heading)node).anchor
+  }
+}
 
 **************************************************************************
 ** TickInlineParser
@@ -173,6 +170,8 @@ internal const class TicksInlineParserFactory : InlineContentParserFactory
 ** the equivalent common markdown: '[url](/url)'. Note - only single-backticks
 ** will be parsed as links, e.g. '``not a link``'
 **
+** Has special handling for `embed://` links
+**
 @Js
 internal class BackticksLinkParser : InlineContentParser
 {
@@ -197,6 +196,128 @@ internal const class BackticksLinkParserFactory : InlineContentParserFactory
   override const Int[] triggerChars := ['`']
 
   override InlineContentParser create() { BackticksLinkParser() }
+}
+
+**************************************************************************
+** Embedded Video
+**************************************************************************
+
+**
+** A link to an embedded video. Uses markdown image syntax.
+** Supported uris for the video are:
+** - Loom: ![Alt text](video://loom/<id>?sid=<sid>)
+** - YouTube:
+**   1. ![Alt text](video://youtu.be/<id>?si=<si>)
+**   1. ![Alt text](video://youtube/<id>?si=<si>)
+**
+** You may specify additional query params and those will be applied as attributes
+** to the rendered iframe in HTML
+**
+@Js
+internal class Video : LinkNode
+{
+  new make(Str destination, Str alt) : super(destination, alt)
+  {
+    this.uri = destination.toUri
+  }
+  const Uri uri
+  Str altText() { this.title ?: "Video" }
+}
+
+@Js
+internal const class VideoProcessor : LinkProcessor
+{
+  new make() { }
+  override LinkResult? process(LinkInfo info, Scanner scanner, InlineParserContext cx)
+  {
+    // ensure there is a link and this is not a link reference
+    dest := info.destination
+    if (dest == null) return null
+
+    // check for image marker
+    if (info.marker?.literal != "!") return null
+
+    // check if it is a video:// uri
+    uri := Uri.fromStr(dest, false)
+    if (uri?.scheme != "video") return null
+
+    return LinkResult.wrapTextIn(Video(dest, info.text), scanner.pos) { it.includeMarker = true }
+  }
+}
+
+@Js
+internal class VideoRenderer : NodeRenderer
+{
+  new make(HtmlContext cx)
+  {
+    this.cx = cx
+    this.html = cx.writer
+  }
+
+  private HtmlContext cx
+  private HtmlWriter html
+
+  override const Type[] nodeTypes := [Video#]
+
+  private static const [Str:Str?] stdAttrs := [
+    "frameborder": "0",
+    "allowfullscreen": null,
+    "webkitallowfullscreen": null,
+    "mozallowfullscreen": null,
+    "width": "50%",
+    "height": "35%",
+  ]
+
+  override Void render(Node node)
+  {
+    video := (Video)node
+    type  := video.uri.host.lower
+    switch (type)
+    {
+      case "loom": renderLoom(video)
+      // case "vimeo": renderVimeo(embed)
+      case "youtube":
+      case "youtu.be":
+        renderYoutube(video)
+      default: throw UnsupportedErr("Video: '${type}'")
+    }
+  }
+
+  private Void renderLoom(Video video)
+  {
+    uri := video.uri
+    id  := uri.path.last.trimToNull ?: throw ParseErr("Invalid loom uri: ${uri}")
+    sid := uri.query["sid"] ?: throw ParseErr("Invalid loom uri: ${uri}")
+    src := `https://www.loom.com/embed/${id}?sid=${sid}`
+    attrs := stdAttrs.dup.addAll([
+      "title": "${video.altText}",
+      "src": "${src}"
+    ]).setAll(uri.query)
+    renderVideo(attrs)
+  }
+
+  private Void renderYoutube(Video video)
+  {
+    uri := video.uri
+    id  := uri.path.getSafe(0) ?: throw ParseErr("Invalid youtube uri: ${uri}")
+    si  := uri.query["si"] ?: throw ParseErr("Invalid youtube uri: ${uri}")
+    src := `https://www.youtube.com/embed/${id}?si=${si}`
+    attrs := stdAttrs.dup.addAll([
+      "title": "${video.altText}",
+      "src":"${src}",
+      "allow":"accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; webshare",
+      "referrerpolicy": "strict-origin-when-cross-origin",
+    ]).setAll(uri.query)
+    renderVideo(attrs)
+  }
+
+  private Void renderVideo([Str:Str?] attrs)
+  {
+    html.line
+    html.tag("div", ["class": "xetodoc-video"])
+    html.tag("iframe", attrs).tag("/iframe")
+    html.tag("/div")
+  }
 }
 
 **************************************************************************

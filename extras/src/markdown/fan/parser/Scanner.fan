@@ -160,7 +160,8 @@ class Scanner
   Int whitespace()
   {
     count := 0
-    while (true)
+    done := false
+    while (!done)
     {
       switch (peek)
       {
@@ -174,7 +175,7 @@ class Scanner
           ++count
           next
         default:
-          break
+          done = true
       }
     }
     return count
@@ -269,7 +270,7 @@ class Scanner
       SourceSpan? newSourceSpan := null
       sourceSpan := line.sourceSpan
       if (sourceSpan != null)
-        newSourceSpan = SourceSpan(sourceSpan.lineIndex, sourceSpan.columnIndex + begin.index, newContent.size)
+        newSourceSpan = sourceSpan.subSpan(begin.index, end.index)
       return SourceLines(SourceLine(newContent, newSourceSpan))
     }
     else
@@ -327,3 +328,4 @@ const class Position
 
   override Str toStr() { "pos(line=${lineIndex}, index=${index})" }
 }
+

@@ -168,11 +168,9 @@ public class ObjEncoder
     return it.first;
   }
 
-  static final FuncType eachIteratorType = new FuncType(new Type[] { Sys.ObjType }, Sys.VoidType);
-
   class EachIterator extends Func.Indirect1
   {
-    EachIterator (boolean first) { super(eachIteratorType); this.first = first; }
+    EachIterator (boolean first) { this.first = first; }
     public Object call(Object obj)
     {
       if (first) { w('\n').wIndent().w('{').w('\n'); level++; first = false; }
@@ -235,10 +233,10 @@ public class ObjEncoder
   public void writeMap(Map map)
   {
     // get k,v type
-    MapType t = (MapType)map.typeof();
+    Type t = map.typeof();
 
     // decide if we're going output as single or multi-line format
-    boolean nl = isMultiLine(t.k) || isMultiLine(t.v);
+    boolean nl = isMultiLine(t.x.k()) || isMultiLine(t.x.v());
 
     // figure out if we can use an inferred type
     boolean inferred = false;
@@ -370,3 +368,4 @@ public class ObjEncoder
   Type curFieldType;
 
 }
+

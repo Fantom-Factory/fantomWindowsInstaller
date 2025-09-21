@@ -37,6 +37,29 @@ class XetodocExtTest : RenderingTest
     // echo(renderer.render(doc))
   }
 
+  Void testHeadingAnchor()
+  {
+    // simple test
+    verifyEq(render("# Intro"), """<h1 id="intro">Intro</h1>\n""")
+
+    // ignore formatting
+    verifyEq(render("# _Intro_ Section"), """<h1 id="intro-section"><em>Intro</em> Section</h1>\n""")
+
+    // handle duplicate section ids
+    verifyEq(render("# Intro\n# Intro"), """<h1 id="intro">Intro</h1>\n<h1 id="intro-1">Intro</h1>\n""")
+
+    // text and code mixed
+    verifyEq(render("## 'Heading' 2"), """<h2 id="heading-2"><code>Heading</code> 2</h2>\n""")
+
+    // whacky symbols and spacing
+    verifyEq(render("# Heading#!\tNoSpace!!!  "), """<h1 id="headingnospace">Heading#!\tNoSpace!!!</h1>\n""")
+  }
+
+  Void testIgnoreHtml()
+  {
+    verifyEq(render("Foo<h1>H1</h1>\n<h2>H2</h2>\n\nText"), "<p>FooH1</p>\n<p>Text</p>\n")
+  }
+
   override protected Str render(Str source)
   {
     renderer.render(parser.parse(source))

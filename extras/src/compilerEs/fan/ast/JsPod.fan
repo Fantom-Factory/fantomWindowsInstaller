@@ -163,21 +163,21 @@ class JsPod : JsNode
       t.fields.each |FieldDef f|
       {
         // don't write for FFI
-        if (f.isForeign || f.fieldType.isForeign) return
+        if (f.isForeign || f.type.isForeign) return
 
         facets := toFacets(f.facets)
-        js.w(".af\$('${f.name}',${f->flags},'${f.fieldType.signature}',{${facets}})")
+        js.w(".af\$('${f.name}',${f->flags},'${f.type.signature}',{${facets}})")
       }
       t.methods.each |MethodDef m|
       {
         if (m.isFieldAccessor) return
-        if (m.params.any |CParam p->Bool| { p.paramType.isForeign }) return
-        params := m.params.join(",") |p| { "new sys.Param('${p.name}','${p.paramType.signature}',${p.hasDefault})"}
+        if (m.params.any |CParam p->Bool| { p.type.isForeign }) return
+        params := m.params.join(",") |p| { "new sys.Param('${p.name}','${p.type.signature}',${p.hasDefault})"}
         paramList := m.params.isEmpty
           ? "xp"
           : "sys.List.make(sys.Param.type\$,[${params}])"
         facets := toFacets(m.facets)
-        js.w(".am\$('${m.name}',${m.flags},'${m.ret.signature}',${paramList},{${facets}})")
+        js.w(".am\$('${m.name}',${m.flags},'${m.returns.signature}',${paramList},{${facets}})")
       }
       js.wl(";")
     }
@@ -249,3 +249,4 @@ class JsPod : JsNode
     js.wl("// cjs exports end")
   }
 }
+

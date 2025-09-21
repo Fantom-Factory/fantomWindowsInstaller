@@ -7,6 +7,7 @@
 //
 package fan.sql;
 
+import java.io.InputStream;
 import java.sql.*;
 import java.util.Iterator;
 import fan.sys.*;
@@ -63,9 +64,7 @@ public class StatementPeer
     else
     {
       this.translated = self.sql;
-      this.paramMap = new Map(
-        Sys.StrType,
-        Sys.IntType.toListOf());
+      this.paramMap = Map.make(Sys.StrType, Sys.IntType.toListOf());
     }
 
     try
@@ -141,7 +140,7 @@ public class StatementPeer
     // map the meta-data to a dynamic type
     ResultSetMetaData meta = rs.getMetaData();
     int numCols = meta.getColumnCount();
-    List cols = new List(SqlUtil.colType, numCols);
+    List cols = List.make(SqlUtil.colType, numCols);
     for (int i=0; i<numCols; ++i)
     {
       String name = meta.getColumnLabel(i+1);
@@ -208,7 +207,7 @@ public class StatementPeer
   {
     Cols cols = makeCols(rs);
     SqlUtil.SqlToFan[] converters = makeConverters(rs);
-    List rows = new List(SqlUtil.rowType);
+    List rows = List.make(SqlUtil.rowType);
     while (rs.next()) rows.add(makeRow(rs, cols, converters));
     return rows;
   }
@@ -313,7 +312,7 @@ public class StatementPeer
 
           // lazily create keys list with proper type
           if (keys == null)
-            keys = new List(key instanceof Long ? Sys.IntType : Sys.StrType);
+            keys = List.make(key instanceof Long ? Sys.IntType : Sys.StrType);
 
           keys.add(key);
         }
@@ -409,9 +408,19 @@ public class StatementPeer
         try
         {
           int idx = ((Long) locs.get(j)).intValue();
-          pstmt.setObject(idx, jobj);
+
+          // Stream via PreparedStatement.setBinaryStream()
+          if (jobj instanceof InputStream)
+          {
+            InputStream stream = (InputStream) jobj;
+            pstmt.setBinaryStream(idx, stream, stream.available());
+          }
+          else
+          {
+            pstmt.setObject(idx, jobj);
+          }
         }
-        catch (SQLException e)
+        catch (Exception e)
         {
           throw SqlErr.make("Param name='" + key + "' class='" + value.getClass().getName() + "'; " +
                             e.getMessage(), Err.make(e));

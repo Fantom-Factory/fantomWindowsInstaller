@@ -37,7 +37,12 @@ const class Parser
     this.delimiterProcessors = builder.delimiterProcessors
     this.linkProcessors = builder.linkProcessors
     this.linkMarkers = builder.linkMarkers
-    this.postProcessorFactories = builder.postProcessorFactories
+
+    // install post-processors. We auto-inject a HeadingProcessor so that
+    // anchor ids are always generated.
+    this.postProcessorFactories =
+      [|->HeadingProcessor| { HeadingProcessor() }]
+        .addAll(builder.postProcessorFactories)
 
     // try to make an inline parser. invalid configuration might result in
     // an error, which we want to detect as soon as possible
@@ -57,8 +62,12 @@ const class Parser
 // Parse
 //////////////////////////////////////////////////////////////////////////
 
+  ** Convenience to parse a file into a `Document`. If source span parsing
+  ** is enabled the nodes will have access to the file location using `Node.loc`.
+  Document parseFile(File file) { parseStream(file.in).withFile(file) }
+
   ** Convenience for 'parseStream(text.in)'
-  Node parse(Str text) { parseStream(text.in) }
+  Document parse(Str text) { parseStream(text.in) }
 
   ** Parse the contents of the input stream into a tree of nodes.
   **
@@ -66,7 +75,7 @@ const class Parser
   ** doc := Parser().parse("Hello *Markdown*!")
   ** <pre
   **
-  Node parseStream(InStream in)
+  Document parseStream(InStream in)
   {
     docParser := createDocumentParser
     doc :=  docParser.parse(in)
@@ -78,7 +87,7 @@ const class Parser
     DocumentParser(this)
   }
 
-  private Node postProcess(Node doc)
+  private Document postProcess(Node doc)
   {
     postProcessorFactories.each |factory| { doc = factory().process(doc) }
     return doc

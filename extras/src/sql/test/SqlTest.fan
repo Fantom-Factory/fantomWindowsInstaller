@@ -6,6 +6,9 @@
 //   12 Jan 07  John Sublett  Creation
 //
 
+using concurrent
+using util
+
 **
 ** SqlTest
 **
@@ -46,8 +49,10 @@ class SqlTest : Test
       preparedStmts
       executeStmts
       batchExecute
-      pool
+      withPrepare
       mysqlVariable
+      postgresBuf
+      postgresList
     }
     catch (Err e)
     {
@@ -560,7 +565,7 @@ class SqlTest : Test
 // Pool
 //////////////////////////////////////////////////////////////////////////
 
-  Void pool()
+  Void withPrepare()
   {
     pool := TestPool
     {
@@ -568,8 +573,26 @@ class SqlTest : Test
       it.username = this.user
       it.password = this.pass
     }
-    pool.execute(|SqlConn c| {})
-    pool.close
+
+    pool.execute(|SqlConn conn| {
+      conn.withPrepare("update farmers set pet = @pet where name = @name") |stmt|
+      {
+        stmt.execute(["name": "Alice", "pet": "Aardvark"])
+      }
+      conn.commit
+
+      res := conn.withPrepare("select pet from farmers where name = @name") |stmt|
+      {
+        rows := stmt.query(["name": "Alice"])
+        verifyEq(rows.size, 1)
+        return rows[0]->pet
+      }
+      verifyEq(res, "Aardvark")
+    })
+
+    verifyEq(pool.openConnections.val, 1)
+    pool.close()
+    verifyEq(pool.openConnections.val, 0)
   }
 
 //////////////////////////////////////////////////////////////////////////
@@ -611,6 +634,169 @@ class SqlTest : Test
       verifyEq(r.get(r.col("@v1")),  42)
 
     }
+  }
+
+//////////////////////////////////////////////////////////////////////////
+// read/write Buf field
+//////////////////////////////////////////////////////////////////////////
+
+  Void postgresBuf()
+  {
+    if (dbType != DbType.postgres) return
+
+    if (db.meta.tableExists("buf"))
+      db.sql("drop table buf").execute
+
+    db.sql(
+     "create table buf (
+      id   text primary key,
+      info bytea)").execute
+
+    insert := db.sql("insert into buf (id, info) values (@id, @info)").prepare
+    select := db.sql("select info from buf where id = @id").prepare
+
+    // MemBuf
+    buf := Buf()
+    buf.writeUtf("Don Quixote")
+    verifyEq(buf.typeof.qname, "sys::MemBuf")
+    verifyBuf("aaa", buf, insert, select)
+
+    // ConstBuf
+    buf = "Sancho Panza".toBuf.toImmutable
+    verifyEq(buf.typeof.qname, "sys::ConstBuf")
+    verifyBuf("bbb", buf, insert, select)
+  }
+
+  private Void verifyBuf(Str id, Buf buf, Statement insert, Statement select)
+  {
+    insert.execute(["id": id, "info": buf])
+
+    rows := select.query(["id": id])
+    verifyEq(rows.size, 1)
+    verifyTrue((rows[0]->info as Buf).bytesEqual(buf))
+  }
+
+//////////////////////////////////////////////////////////////////////////
+// read/write List field
+//////////////////////////////////////////////////////////////////////////
+
+  Void postgresList()
+  {
+    if (dbType != DbType.postgres) return
+
+    if (db.meta.tableExists("list"))
+      db.sql("drop table list").execute
+
+    db.sql(
+      "create table list (
+         texts   text[],
+         ints    int[],
+         longs   bigint[],
+         bools   boolean[],
+         floats  real[],
+         doubles double precision[],
+         times   timestamptz[])"
+       ).execute
+
+    base := 3000000000 // Larger than Integer.MAX_VALUE
+    now := DateTime.now
+
+    insert := db.sql(
+      "insert into list (texts, ints, longs, bools, floats, doubles, times)
+       values (@texts, @ints, @longs, @bools, @floats, @doubles, @times)").prepare
+
+    //----------------------------------------------
+    // non-nullable lists
+    //----------------------------------------------
+
+    insert.execute([
+      "texts":   Str["a", "b", "c"],
+      "ints":    Int[1, 2, 3],
+      "longs":   Int[base+1, base+2, base+3],
+      "bools":   Bool[true, false],
+      "floats":  Float[1.0f, 2.0f, 3.0f],
+      "doubles": Float[4.0f, 5.0f, 6.0f],
+      "times":   DateTime[now.plus(1hr), now.plus(2hr), now.plus(3hr)],
+    ])
+
+    rows := db.sql("select * from list").query
+    verifyEq(rows.size, 1)
+    verifyEq(rows[0]->texts,   Str["a", "b", "c"])
+    verifyEq(rows[0]->ints,    Int[1, 2, 3])
+    verifyEq(rows[0]->longs,   Int[base+1, base+2, base+3])
+    verifyEq(rows[0]->bools,   Bool[true, false])
+    verifyEq(rows[0]->floats,  Float[1.0f, 2.0f, 3.0f])
+    verifyEq(rows[0]->doubles, Float[4.0f, 5.0f, 6.0f])
+    verifyEq(rows[0]->times,   DateTime[now.plus(1hr), now.plus(2hr), now.plus(3hr)])
+
+    db.sql("delete from list").execute
+    rows = db.sql("select * from list").query
+    verifyEq(rows.size, 0)
+
+    //----------------------------------------------
+    // nullable lists
+    //----------------------------------------------
+
+    insert.execute([
+      "texts":   Str?["a", "b", "c", null],
+      "ints":    Int?[1, 2, 3, null],
+      "longs":   Int?[base+1, base+2, base+3, null],
+      "bools":   Bool?[true, false, null],
+      "floats":  Float?[1.0f, 2.0f, 3.0f, null],
+      "doubles": Float?[4.0f, 5.0f, 6.0f, null],
+      "times":   DateTime?[now.plus(1hr), now.plus(2hr), now.plus(3hr), null],
+    ])
+
+    rows = db.sql("select * from list").query
+    verifyEq(rows.size, 1)
+    verifyEq(rows[0]->texts,   Str?["a", "b", "c", null])
+    verifyEq(rows[0]->ints,    Int?[1, 2, 3, null])
+    verifyEq(rows[0]->longs,   Int?[base+1, base+2, base+3, null])
+    verifyEq(rows[0]->bools,   Bool?[true, false, null])
+    verifyEq(rows[0]->floats,  Float?[1.0f, 2.0f, 3.0f, null])
+    verifyEq(rows[0]->doubles, Float?[4.0f, 5.0f, 6.0f, null])
+    verifyEq(rows[0]->times,   DateTime?[now.plus(1hr), now.plus(2hr), now.plus(3hr), null])
+
+    db.sql("delete from list").execute
+    rows = db.sql("select * from list").query
+    verifyEq(rows.size, 0)
+
+    //----------------------------------------------
+    // float array
+    //----------------------------------------------
+
+    insert = db.sql(
+      "insert into list (floats, doubles)
+       values (@floats, @doubles)").prepare
+
+    floats := FloatArray.makeF4(3)
+    floats.set(0, 1.0f)
+    floats.set(1, 2.0f)
+    floats.set(2, 3.0f)
+
+    doubles := FloatArray.makeF8(3)
+    doubles.set(0, 4.0f)
+    doubles.set(1, 5.0f)
+    doubles.set(2, 6.0f)
+
+    insert.execute([
+      "floats":  floats,
+      "doubles": doubles,
+    ])
+
+    rows = db.sql("select * from list").query
+    verifyEq(rows.size, 1)
+    verifyNull(rows[0]->texts)
+    verifyNull(rows[0]->ints)
+    verifyNull(rows[0]->longs)
+    verifyNull(rows[0]->bools)
+    verifyEq(rows[0]->floats,  Float[1.0f, 2.0f, 3.0f])
+    verifyEq(rows[0]->doubles, Float[4.0f, 5.0f, 6.0f])
+    verifyNull(rows[0]->times)
+
+    db.sql("delete from list").execute
+    rows = db.sql("select * from list").query
+    verifyEq(rows.size, 0)
   }
 
 //////////////////////////////////////////////////////////////////////////
@@ -694,18 +880,19 @@ internal enum class DbType
 ** TestPool
 **************************************************************************
 
-const internal class TestPool : SqlConnPool
+internal const class TestPool : SqlConnPool
 {
   new make(|This|? f) : super(f) {}
 
   protected override Void onOpen(SqlConn c)
   {
-    if (!c.stash.isEmpty) throw Err("test failure")
-    c.stash["foo"] = 42
+    openConnections.increment
   }
 
   protected override Void onClose(SqlConn c)
   {
-    if (c.stash["foo"] != 42) throw Err("test failure")
+    openConnections.decrement
   }
+
+  internal const AtomicInt openConnections := AtomicInt(0)
 }

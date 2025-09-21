@@ -44,6 +44,18 @@ public abstract class Type
   public static Type find(String sig) { return TypeParser.load(sig, true, null); }
   public static Type find(String sig, boolean checked) { return TypeParser.load(sig, checked, null); }
 
+  /** Construct parameterized map type for given key and value */
+  public static Type makeMap(Type k, Type v)
+  {
+    return new MapType(k, v);
+  }
+
+  /** Construct parameterized func type */
+  public static Type makeFunc(Type[] params, Type ret)
+  {
+    return new FuncType(params, ret);
+  }
+
 //////////////////////////////////////////////////////////////////////////
 // Naming
 //////////////////////////////////////////////////////////////////////////
@@ -163,13 +175,13 @@ public abstract class Type
     return isGenericType();
   }
 
-  public Map params()
+  public Map<String,Type> params()
   {
     if (noParams == null) noParams = Sys.emptyStrTypeMap;
     return (Map)noParams;
   }
 
-  public Type parameterize(Map params)
+  public Type parameterize(Map<String,Type> params)
   {
     if (this == Sys.ListType)
     {
@@ -220,9 +232,9 @@ public abstract class Type
 // Slots
 //////////////////////////////////////////////////////////////////////////
 
-  public abstract List fields();
-  public abstract List methods();
-  public abstract List slots();
+  public abstract List<Field> fields();
+  public abstract List<Method> methods();
+  public abstract List<Slot> slots();
 
   public final Field field(String name) { return field(name, true); }
   public Field field(String name, boolean checked) { return (Field)slot(name, checked); }
@@ -262,9 +274,9 @@ public abstract class Type
 
   public abstract Type base();
 
-  public abstract List mixins();
+  public abstract List<Type> mixins();
 
-  public abstract List inheritance();
+  public abstract List<Type> inheritance();
 
   public final boolean fits(Type type) { return toNonNullable().is(type.toNonNullable()); }
   public abstract boolean is(Type type);
@@ -299,7 +311,7 @@ public abstract class Type
 // Facets
 //////////////////////////////////////////////////////////////////////////
 
-  public abstract List facets();
+  public abstract List<Facet> facets();
 
   public final Facet facet(Type t) { return facet(t, true); }
   public abstract Facet facet(Type t, boolean c);
@@ -311,6 +323,8 @@ public abstract class Type
 //////////////////////////////////////////////////////////////////////////
 
   public abstract String doc();
+
+  public void docSet(String d) {}
 
 //////////////////////////////////////////////////////////////////////////
 // Conversion
@@ -329,15 +343,15 @@ public abstract class Type
 // Reflection
 //////////////////////////////////////////////////////////////////////////
 
+  /**
+   * Fantom use only
+   */
   protected Type reflect() { return this; }
 
-  public void finish() {}
-
   /**
-   * Return if this is a JavaType which represents a Java
-   * class imported into the Fantom type system via the Java FFI.
+   * Fantom use only
    */
-  public final boolean isJava() { return this instanceof JavaType; }
+  public void finish() {}
 
   /**
    * Return if the Fantom Type is represented as a Java class
@@ -350,6 +364,50 @@ public abstract class Type
    */
   public abstract Class toClass();
 
+  /**
+   * Fantom use only for JStub
+   */
+  public FTypeEmit[] emitToClassFiles()
+    throws Exception
+  {
+    throw UnsupportedErr.make();
+  }
+
+//////////////////////////////////////////////////////////////////////////
+// Framework
+//////////////////////////////////////////////////////////////////////////
+
+  /**
+   * Fantom internal use only APIs
+   */
+  public final InternalOnly x = new InternalOnly(this);
+
+  /**
+   * Fantom internal use only APIs
+   */
+  public final static class InternalOnly
+  {
+    InternalOnly(Type t) { this.t = t;  }
+    public boolean isList() { return t.isList(); }
+    public boolean isMap()  { return t.isMap(); }
+    public boolean isFunc() { return t.isFunc(); }
+    public boolean isJava() { return t.isJava(); }
+    public Type k() { return t.k(); }
+    public Type v() { return t.v(); }
+    public int funcArity() { return t.funcArity(); }
+    public Map makeMap(HashMap map) { return t.makeMap(map); }
+    final Type t;
+  }
+
+  boolean isList() { return false; }
+  boolean isMap()  { return false; }
+  boolean isFunc() { return false; }
+  boolean isJava() { return false; }
+  Type k() { throw UnsupportedErr.make(); }
+  Type v() { throw UnsupportedErr.make(); }
+  int funcArity() { throw UnsupportedErr.make(); }
+  Map makeMap(HashMap map) { throw UnsupportedErr.make(); }
+
 //////////////////////////////////////////////////////////////////////////
 // Fields
 //////////////////////////////////////////////////////////////////////////
@@ -361,3 +419,4 @@ public abstract class Type
   List emptyList;  // cached value of emptyList()
 
 }
+

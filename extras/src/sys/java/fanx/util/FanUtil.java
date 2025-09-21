@@ -357,7 +357,7 @@ public class FanUtil
       if (t == Sys.BoolType)  return 'I';
       if (t == Sys.IntType)   return 'J';
       if (t == Sys.FloatType) return 'D';
-      if (t.isJava() && t.podName().equals("[java]"))
+      if (t.x.isJava() && t.podName().equals("[java]"))
       {
         // FFI primitives
         if (t.name().equals("byte"))    return 'I';
@@ -449,4 +449,28 @@ public class FanUtil
     return flags;
   }
 
+  /**
+   * List type fantom slot name to Java slot name swizzles
+   */
+  public static final HashMap<String,String> listSwizzles = new HashMap<>();
+  static
+  {
+    // keep in sync with fanc::JavaUtil
+    listSwizzles.put("add",    "_add");
+    listSwizzles.put("clear",  "_clear");
+    listSwizzles.put("remove", "_remove");
+    listSwizzles.put("size",   "_size");
+  }
+
+  /**
+   * Map type fantom slot name to Java slot name swizzles
+   */
+  public static final HashMap<String,String> mapSwizzles = new HashMap<>();
+  static
+  {
+    // keep in sync with fanc::JavaUtil
+    mapSwizzles.put("clear",  "_clear");
+    mapSwizzles.put("size",   "_size");
+  }
 }
+

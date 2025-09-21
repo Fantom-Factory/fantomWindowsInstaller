@@ -205,7 +205,8 @@ class ClosureVars : CompilerStep
       init = ((BinaryExpr)stmt.init).rhs
 
     // replace original initialization with wrapper construction
-    stmt.init = initWrapper(stmt.loc, stmt.var, init)
+    stmt.init  = initWrapper(stmt.loc, stmt.var, init)
+    stmt.ctype = stmt.init.ctype
     return null
   }
 
@@ -269,7 +270,7 @@ class ClosureVars : CompilerStep
       if (var.paramWrapper == null) return
       loc := method.loc
       initWrap := initWrapper(loc, var.paramWrapper, LocalVarExpr.makeNoUnwrap(loc, var))
-      method.code.stmts.insert(0, initWrap.toStmt)
+      method.code.stmts.insert(0, LocalDefStmt(initWrap))
     }
   }
 
@@ -325,8 +326,8 @@ class ClosureVars : CompilerStep
     field := addToClosure(closure, name, LocalVarExpr.makeNoUnwrap(loc, var.shadows), "wrapper for $var.name.toCode")
 
     // load from field to local in beginning of doCall
-    loadLocal := BinaryExpr.makeAssign(LocalVarExpr.makeNoUnwrap(loc, var), fieldExpr(loc, ThisExpr(loc), field))
-    closure.doCall.code.stmts.insert(0, loadLocal.toStmt)
+    init := BinaryExpr.makeAssign(LocalVarExpr.makeNoUnwrap(loc, var), fieldExpr(loc, ThisExpr(loc), field))
+    closure.doCall.code.stmts.insert(0, LocalDefStmt(init))
   }
 
   **
@@ -374,7 +375,7 @@ class ClosureVars : CompilerStep
     field := FieldDef(loc, implType)
     field.name  = name
     field.flags = syntheticFieldFlags
-    field.fieldType = ctype
+    field.type = ctype
     field.closureInfo = info
     implType.addSlot(field)
 
@@ -414,9 +415,26 @@ class ClosureVars : CompilerStep
   static CField genWrapper(CompilerSupport cs, CType ctype)
   {
     // build class name key
-    suffix := ctype.isNullable ? "\$n" : ""
     podName := ctype.pod.name != "sys" ? "\$" + toSafe(ctype.pod.name) : ""
-    name := "Wrap" + podName + "\$" + toSafe(ctype.name) + suffix
+    name := "Wrap" + podName + "\$" + toSafe(ctype.name)
+
+    // if this flag is set, we need to add param types to clas name key
+    if (cs.compiler.input.wrapperPerParameterizedCollectionType && ctype.isParameterized)
+    {
+      if (ctype.isList)
+      {
+        list := (ListType)ctype.toNonNullable
+        name += "\$" + toSafe(list.v.name)
+      }
+      else if (ctype.isMap)
+      {
+        map := (MapType)ctype.toNonNullable
+        name += "\$" + toSafe(map.k.name) + "\$" + toSafe(map.v.name)
+      }
+    }
+
+    // add $n if nullable
+    if (ctype.isNullable) name += "\$n"
 
     // reuse existing wrapper
     existing := cs.compiler.wrappers[name]
@@ -432,17 +450,17 @@ class ClosureVars : CompilerStep
     // generate val field
     f := FieldDef(loc, w)
     f.name = "val"
-    f.fieldType = ctype
+    f.type = ctype
     f.flags = syntheticFieldFlags
     w.addSlot(f)
 
     // generate constructor:  make(T v) { this.val = v }
     ctor := MethodDef(loc, w)
-    ctor.flags  = FConst.Ctor + FConst.Internal + FConst.Synthetic
-    ctor.name   = "make"
-    ctor.ret    = cs.ns.voidType
+    ctor.flags   = FConst.Ctor + FConst.Internal + FConst.Synthetic
+    ctor.name    = "make"
+    ctor.returns = cs.ns.voidType
     param := ParamDef(loc, ctype, "v")
-    pvar  := MethodVar.makeForParam(ctor, 1, param, param.paramType)
+    pvar  := MethodVar.makeForParam(ctor, 1, param, param.type)
     ctor.params.add(param)
     ctor.vars.add(pvar)
     ctor.code   = Block(loc)

@@ -11,7 +11,7 @@ import java.io.*;
 import java.nio.*;
 
 /**
- * MemBuf
+ * MemBuf is mutable Buf of byte[]
  */
 public final class MemBuf
   extends Buf
@@ -237,6 +237,11 @@ public final class MemBuf
     return ByteBuffer.wrap(buf, pos, size-pos);
   }
 
+  public InputStream javaIn()
+  {
+    return new ByteArrayInputStream(buf, 0, size);
+  }
+
 //////////////////////////////////////////////////////////////////////////
 // File
 //////////////////////////////////////////////////////////////////////////
@@ -367,3 +372,4 @@ public final class MemBuf
   private MemBufOutStream out;
 
 }
+

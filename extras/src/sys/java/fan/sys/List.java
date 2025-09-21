@@ -14,38 +14,104 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.ListIterator;
+import java.util.NoSuchElementException;
 import fanx.serial.*;
 import fanx.util.*;
 
 /**
- * List
+ * List represents a linear sequence of Objects indexed by an Int.
  */
-public final class List
+public final class List<V>
   extends FanObj
-  implements Literal
+  implements Literal, java.util.List<V>
 {
 
 //////////////////////////////////////////////////////////////////////////
 // Constructors
 //////////////////////////////////////////////////////////////////////////
 
+  /**
+   * Construct empty list of given type
+   */
+  public static List make(Type of)
+  {
+    return new List(of);
+  }
+
+  /**
+   * Construct empty list of given type with given capacity
+   */
   public static List make(Type of, long capacity)
   {
     return new List(of, (int)capacity);
   }
 
+  /**
+   * Construct empty list of Obj? with given capacity
+   */
   public static List makeObj(long capacity)
   {
     return new List(Sys.ObjType.toNullable(), (int)capacity);
   }
 
+  /**
+   * Construct list of Obj? for an array. No copy is made
+   * of the backing array, it should be no used again.  If the
+   * array is null then return null.
+   */
+  public static List makeObj(Object[] values)
+  {
+    if (values == null) return null;
+    return new List(Sys.ObjType.toNullable(), values, values.length);
+  }
+
+  /**
+   * Construct list of given type for an array. No copy is made
+   * of the backing array, it should be no used again.  If the
+   * array is null then return null.
+   */
   public static List make(Type of, Object[] values)
   {
     if (values == null) return null;
     return new List(of, values);
   }
 
-  public List(Type of, Object[] values)
+  /**
+   * Construct list of given type for an array and size. No copy is made
+   * of the backing array, it should be no used again.  If the
+   * array is null then return null.
+   */
+  public static List make(Type of, Object[] values, int size)
+  {
+    if (values == null) return null;
+    return new List(of, values, size);
+  }
+
+  /**
+   * Construct list of given type using collection.
+   */
+  public static List make(Type of, Collection c)
+  {
+    return new List(of, c);
+  }
+
+  List(Type of)
+  {
+    if (of == null) { Thread.dumpStack(); throw NullErr.make(); }
+    this.of = of;
+    this.values = (V[])empty;
+  }
+
+  List(Type of, int capacity)
+  {
+    if (of == null) { Thread.dumpStack(); throw NullErr.make(); }
+    this.of = of;
+    this.values = capacity == 0 ? (V[])empty : newArray(capacity);
+  }
+
+  List(Type of, V[] values)
   {
     if (of == null) { Thread.dumpStack(); throw NullErr.make(); }
     this.of = of;
@@ -53,7 +119,7 @@ public final class List
     this.size = values.length;
   }
 
-  public List(Type of, Object[] values, int size)
+  List(Type of, V[] values, int size)
   {
     if (of == null) { Thread.dumpStack(); throw NullErr.make(); }
     this.of = of;
@@ -61,33 +127,19 @@ public final class List
     this.size = size;
   }
 
-  public List(Type of, int capacity)
-  {
-    if (of == null) { Thread.dumpStack(); throw NullErr.make(); }
-    this.of = of;
-    this.values = capacity == 0 ? empty : newArray(capacity);
-  }
-
-  public List(Type of)
-  {
-    if (of == null) { Thread.dumpStack(); throw NullErr.make(); }
-    this.of = of;
-    this.values = empty;
-  }
-
-  public List(Type of, Collection collection)
+  List(Type of, Collection collection)
   {
     if (of == null) { Thread.dumpStack(); throw NullErr.make(); }
     this.of = of;
     this.size = collection.size();
-    this.values = collection.toArray(newArray(size));
+    this.values = (V[])collection.toArray(newArray(size));
   }
 
-  public List(String[] values)
+  List(String[] values)
   {
     this.of = Sys.StrType;
     this.size = values.length;
-    this.values = values;
+    this.values = (V[])values;
   }
 
 //////////////////////////////////////////////////////////////////////////
@@ -113,12 +165,12 @@ public final class List
     return size == 0;
   }
 
-  public final long size()
+  public final long _size()
   {
     return size;
   }
 
-  public final void size(long s)
+  public final void _size(long s)
   {
     modify();
     int newSize = (int)s;
@@ -127,7 +179,7 @@ public final class List
       if (!of.isNullable()) throw ArgErr.make("Cannot grow non-nullable list of " + of);
       if (newSize > values.length)
       {
-        Object[] temp = newArray(newSize);
+        V[] temp = newArray(newSize);
         System.arraycopy(values, 0, temp, 0, size);
         values = temp;
       }
@@ -155,12 +207,12 @@ public final class List
     modify();
     int newCapacity = (int)c;
     if (newCapacity < size) throw ArgErr.make("capacity < size");
-    Object[] temp = newArray(newCapacity);
+    V[] temp = newArray(newCapacity);
     System.arraycopy(values, 0, temp, 0, size);
     values = temp;
   }
 
-  public final Object get(long index)
+  public final V get(long index)
   {
     try
     {
@@ -175,15 +227,15 @@ public final class List
     }
   }
 
-  public final Object getSafe(long index) { return getSafe(index, null); }
-  public final Object getSafe(long index, Object def)
+  public final V getSafe(long index) { return getSafe(index, null); }
+  public final V getSafe(long index, V def)
   {
     if (index < 0) index = size + index;
     if (index >= size || index < 0) return def;
     return values[(int)index];
   }
 
-  public final List getRange(Range r)
+  public final List<V> getRange(Range r)
   {
     int s = r.startIndex(size);
     int e = r.endIndex(size);
@@ -215,7 +267,7 @@ public final class List
     return false;
   }
 
-  public final boolean containsAll(List list)
+  public final boolean containsAll(List<V> list)
   {
     for (int i=0; i<list.sz(); ++i)
       if (index(list.get(i)) == null)
@@ -223,7 +275,7 @@ public final class List
     return true;
   }
 
-  public final boolean containsAny(List list)
+  public final boolean containsAny(List<V> list)
   {
     for (int i=0; i<list.sz(); ++i)
       if (index(list.get(i)) != null)
@@ -231,8 +283,8 @@ public final class List
     return false;
   }
 
-  public final Long index(Object value) { return index(value, 0L); }
-  public final Long index(Object value, long off)
+  public final Long index(V value) { return index(value, 0L); }
+  public final Long index(V value, long off)
   {
     if (size == 0) return null;
     int start = (int)off;
@@ -264,8 +316,8 @@ public final class List
     }
   }
 
-  public final Long indexr(Object value) { return indexr(value, -1L); }
-  public final Long indexr(Object value, long off)
+  public final Long indexr(V value) { return indexr(value, -1L); }
+  public final Long indexr(V value, long off)
   {
     if (size == 0) return null;
     int start = (int)off;
@@ -297,8 +349,8 @@ public final class List
     }
   }
 
-  public final Long indexSame(Object value) { return indexSame(value, 0L); }
-  public final Long indexSame(Object value, long off)
+  public final Long indexSame(V value) { return indexSame(value, 0L); }
+  public final Long indexSame(V value, long off)
   {
     if (size == 0) return null;
     int start = (int)off;
@@ -318,21 +370,21 @@ public final class List
     }
   }
 
-  public final Object first()
+  public final V first()
   {
     if (size == 0) return null;
     return values[0];
   }
 
-  public final Object last()
+  public final V last()
   {
     if (size == 0) return null;
     return values[size-1];
   }
 
-  public final List dup()
+  public final List<V> dup()
   {
-    Object[] dup = newArray(size);
+    V[] dup = newArray(size);
     System.arraycopy(values, 0, dup, 0, size);
     return new List(of, dup);
   }
@@ -366,7 +418,7 @@ public final class List
 // Modification
 //////////////////////////////////////////////////////////////////////////
 
-  public final List set(long index, Object value)
+  public final List<V> set(long index, V value)
   {
     modify();
     try
@@ -387,34 +439,34 @@ public final class List
     }
   }
 
-  public final List setNotNull(long index, Object value)
+  public final List<V> setNotNull(long index, V value)
   {
     if (value == null) return this;
     return set(index, value);
   }
 
-  public final List add(Object value)
+  public final List<V> _add(V value)
   {
     // modify in insert(int, Obj)
     return insert(size, value);
   }
 
   // deprecated
-  public final List addIfNotNull(Object value) { return addNotNull(value); }
+  public final List<V> addIfNotNull(V value) { return addNotNull(value); }
 
-  public final List addNotNull(Object value)
+  public final List<V> addNotNull(V value)
   {
     if (value == null) return this;
-    return add(value);
+    return _add(value);
   }
 
-  public final List addAll(List list)
+  public final List<V> addAll(List<V> list)
   {
     // modify in insertAll(int, List)
     return insertAll(size, list);
   }
 
-  public final List insert(long index, Object value)
+  public final List<V> insert(long index, V value)
   {
     // modify in insert(int, Obj)
     int i = (int)index;
@@ -423,7 +475,7 @@ public final class List
     return insert(i, value);
   }
 
-  private List insert(int i, Object value)
+  private List<V> insert(int i, V value)
   {
     try
     {
@@ -442,7 +494,7 @@ public final class List
     }
   }
 
-  public final List insertAll(long index, List list)
+  public final List<V> insertAll(long index, List<V> list)
   {
     // modify in insertAll(int, List)
     int i = (int)index;
@@ -451,7 +503,7 @@ public final class List
     return insertAll(i, list);
   }
 
-  private List insertAll(int i, List list)
+  private List<V> insertAll(int i, List<V> list)
   {
     modify();
     if (list.size == 0) return this;
@@ -464,7 +516,7 @@ public final class List
     return this;
   }
 
-  public final Object remove(Object val)
+  public final V _remove(V val)
   {
     // modify in removeAt(Int)
     Long index = index(val);
@@ -472,7 +524,7 @@ public final class List
     return removeAt(index);
   }
 
-  public final Object removeSame(Object val)
+  public final V removeSame(V val)
   {
     // modify in removeAt(Int)
     Long index = indexSame(val);
@@ -480,20 +532,20 @@ public final class List
     return removeAt(index);
   }
 
-  public final Object removeAt(long index)
+  public final V removeAt(long index)
   {
     modify();
     int i = (int)index;
     if (i < 0) i = size + i;
     if (i >= size) throw IndexErr.make(index);
-    Object old = values[i];
+    V old = values[i];
     if (i < size-1)
       System.arraycopy(values, i+1, values, i, size-i-1);
     size--;
     return old;
   }
 
-  public final List removeRange(Range r)
+  public final List<V> removeRange(Range r)
   {
     modify();
     int s = r.startIndex(size);
@@ -508,7 +560,7 @@ public final class List
     return this;
   }
 
-  public final List removeAll(List toRemove)
+  public final List<V> removeAll(List<V> toRemove)
   {
     // optimize special cases
     modify();
@@ -517,11 +569,11 @@ public final class List
 
     // rebuild the backing store array, implementation
     // assumes that this list is bigger than toRemove list
-    Object[] newValues = newArray(values.length);
+    V[] newValues = newArray(values.length);
     int newSize = 0;
     for (int i=0; i<size; ++i)
     {
-      Object val = values[i];
+      V val = values[i];
       if (!toRemove.contains(val)) newValues[newSize++] = val;
     }
     this.values = newValues;
@@ -535,28 +587,28 @@ public final class List
     if (desired < 1) throw Err.make("desired " + desired + " < 1");
     int newSize = Math.max(desired, size*2);
     if (newSize < 10) newSize = 10;
-    Object[] temp = newArray(newSize);
+    V[] temp = newArray(newSize);
     System.arraycopy(values, 0, temp, 0, size);
     values = temp;
   }
 
-  public final List trim()
+  public final List<V> trim()
   {
     modify();
     if (size == 0)
     {
-      values = empty;
+      values = (V[])empty;
     }
     else if (values.length != size)
     {
-      Object[] temp = newArray(size);
+      V[] temp = newArray(size);
       System.arraycopy(values, 0, temp, 0, size);
       values = temp;
     }
     return this;
   }
 
-  public final List clear()
+  public final List<V> _clear()
   {
     modify();
     for (int i=0; i<size; ++i)
@@ -565,7 +617,7 @@ public final class List
     return this;
   }
 
-  public final List fill(Object val, long times)
+  public final List<V> fill(V val, long times)
   {
     modify();
     int t = (int)times;
@@ -579,23 +631,23 @@ public final class List
 // Stack
 //////////////////////////////////////////////////////////////////////////
 
-  public final Object peek()
+  public final V peek()
   {
     if (size == 0) return null;
     return values[size-1];
   }
 
-  public final Object pop()
+  public final V pop()
   {
     // modify in removeAt()
     if (size == 0) return null;
     return removeAt(-1);
   }
 
-  public final List push(Object obj)
+  public final List<V> push(V obj)
   {
     // modify in add()
-    return add(obj);
+    return _add(obj);
   }
 
 //////////////////////////////////////////////////////////////////////////
@@ -711,7 +763,7 @@ public final class List
     return null;
   }
 
-  public final Object find(Func f)
+  public final V find(Func f)
   {
     if (f.arity() == 1)
     {
@@ -750,7 +802,7 @@ public final class List
     return null;
   }
 
-  public final List findAll(Func f)
+  public final List<V> findAll(Func f)
   {
     List acc = new List(of, size);
     if (f.arity() == 1)
@@ -768,7 +820,7 @@ public final class List
     return acc;
   }
 
-  public final List findType(Type t)
+  public final List<V> findType(Type t)
   {
     List acc = new List(t, size);
     for (int i=0; i<size; ++i)
@@ -780,7 +832,7 @@ public final class List
     return acc;
   }
 
-  public final List findNotNull()
+  public final List<V> findNotNull()
   {
     List acc = new List(of.toNonNullable(), size);
     for (int i=0; i<size; ++i)
@@ -792,7 +844,7 @@ public final class List
     return acc;
   }
 
-  public final List exclude(Func f)
+  public final List<V> exclude(Func f)
   {
     List acc = new List(of, size);
     if (f.arity() == 1)
@@ -863,7 +915,7 @@ public final class List
   {
     Type r = f.returns();
     if (r == Sys.VoidType) r = Sys.ObjType.toNullable();
-    List acc = new List(r, (int)size());
+    List acc = new List(r, size);
     if (f.arity() == 1)
     {
       for (int i=0; i<size; ++i)
@@ -881,7 +933,7 @@ public final class List
   {
     Type r = f.returns();
     if (r == Sys.VoidType) r = Sys.ObjType;
-    List acc = new List(r.toNonNullable(), (int)size());
+    List acc = new List(r.toNonNullable(), size);
     if (f.arity() == 1)
     {
       for (int i=0; i<size; ++i)
@@ -900,7 +952,7 @@ public final class List
     Type r = f.returns();
     Type of = Sys.ObjType.toNullable();
     if (r instanceof ListType) of = ((ListType)r).v;
-    List acc = new List(of, (int)size());
+    List acc = new List(of, size);
     if (f.arity() == 1)
     {
       for (int i=0; i<size; ++i)
@@ -914,7 +966,7 @@ public final class List
     return acc;
   }
 
-  public final Map groupBy(Func f)
+  public final Map<Object,List<V>> groupBy(Func f)
   {
     Type r = f.returns();
     if (r == Sys.VoidType) r = Sys.ObjType;
@@ -922,7 +974,7 @@ public final class List
     return groupByInto(acc, f);
   }
 
-  public final Map groupByInto(Map acc, Func f)
+  public final Map<Object,List<V>> groupByInto(Map acc, Func f)
   {
     MapType accType = acc.type();
     if (!(accType.v instanceof ListType)) throw ArgErr.make("Map value type is not list: $accType");
@@ -943,31 +995,31 @@ public final class List
     return acc;
   }
 
-  public final Object max() { return max(null); }
-  public final Object max(Func f)
+  public final V max() { return max(null); }
+  public final V max(Func f)
   {
     if (size == 0) return null;
     Comparator c = toComparator(f);
-    Object max = values[0];
+    V max = values[0];
     for (int i=1; i<size; ++i)
       if (c.compare(values[i], max) > 0)
         max = values[i];
     return max;
   }
 
-  public final Object min() { return min(null); }
-  public final Object min(Func f)
+  public final V min() { return min(null); }
+  public final V min(Func f)
   {
     if (size == 0) return null;
     Comparator c = toComparator(f);
-    Object min = values[0];
+    V min = values[0];
     for (int i=1; i<size; ++i)
       if (c.compare(values[i], min) < 0)
         min = values[i];
     return min;
   }
 
-  public final List unique()
+  public final List<V> unique()
   {
     if (size <= 1) return dup();
     HashMap dups = new HashMap(size*3);
@@ -984,7 +1036,7 @@ public final class List
     return acc;
   }
 
-  public final List union(List that)
+  public final List<V> union(List<V> that)
   {
     int capacity = size + that.size;
     HashMap dups = new HashMap(capacity*3);
@@ -1015,7 +1067,7 @@ public final class List
     return acc;
   }
 
-  public final List intersection(List that)
+  public final List<V> intersection(List<V> that)
   {
     // put other list into map
     HashMap dups = new HashMap(that.size*3);
@@ -1041,24 +1093,24 @@ public final class List
 // Utils
 //////////////////////////////////////////////////////////////////////////
 
-  public final List sort() { return sort(null); }
-  public final List sort(final Func f)
+  public final List<V> sort() { return sort((Func)null); }
+  public final List<V> sort(final Func f)
   {
     modify();
     Arrays.sort(values, 0, size, toComparator(f));
     return this;
   }
 
-  public final List sortr() { return sortr(null); }
-  public final List sortr(final Func f)
+  public final List<V> sortr() { return sortr(null); }
+  public final List<V> sortr(final Func f)
   {
     modify();
     Arrays.sort(values, 0, size, toReverseComparator(f));
     return this;
   }
 
-  public final long binarySearch(Object key) { return binarySearch(key, null); }
-  public final long binarySearch(Object key, Func f)
+  public final long binarySearch(V key) { return binarySearch(key, null); }
+  public final long binarySearch(V key, Func f)
   {
     Comparator c = toComparator(f);
     Object[] values = this.values;
@@ -1098,7 +1150,7 @@ public final class List
     return -(low + 1);
   }
 
-  public final List reverse()
+  public final List<V> reverse()
   {
     modify();
     Object[] values = this.values;
@@ -1114,23 +1166,23 @@ public final class List
     return this;
   }
 
-  public final List swap(long a, long b)
+  public final List<V> swap(long a, long b)
   {
     // modify in set()
-    Object temp = get(a);
+    V temp = get(a);
     set(a, get(b));
     set(b, temp);
     return this;
   }
 
-  public final List moveTo(Object item, long toIndex)
+  public final List<V> moveTo(V item, long toIndex)
   {
     modify();
     Long curIndex = index(item);
     if (curIndex == null) return this;
     if (curIndex == toIndex) return this;
     removeAt(curIndex);
-    if (toIndex == -1) return add(item);
+    if (toIndex == -1) return _add(item);
     if (toIndex < 0) ++toIndex;
     return insert(toIndex, item);
   }
@@ -1154,7 +1206,7 @@ public final class List
     }
   }
 
-  public final Object random()
+  public final V random()
   {
     if (size == 0) return null;
     int i = FanInt.random.nextInt();
@@ -1162,13 +1214,13 @@ public final class List
     return values[i % size];
   }
 
-  public final List shuffle()
+  public final List<V> shuffle()
   {
     modify();
     for (int i=0; i<size; ++i)
     {
       int randi = FanInt.random.nextInt(i+1);
-      Object temp = values[i];
+      V temp = values[i];
       values[i] = values[randi];
       values[randi] = temp;
     }
@@ -1249,20 +1301,8 @@ public final class List
     return size;
   }
 
-  public final Object get(int i)
-  {
-    try
-    {
-      if (i >= size) throw IndexErr.make(""+i);
-      return values[i];
-    }
-    catch (ArrayIndexOutOfBoundsException e)
-    {
-      throw IndexErr.make(""+i);
-    }
-  }
-
-  private Object[] newArray(int capacity)
+  private V[] newArray(int capacity) { return (V[])doNewArray(capacity); }
+  private Object[] doNewArray(int capacity)
   {
     // use backing store of correct array type;
     // handle Java types and bootstrap types directly
@@ -1407,7 +1447,7 @@ public final class List
     return readonly;
   }
 
-  public final List rw()
+  public final List<V> rw()
   {
     if (!readonly) return this;
 
@@ -1422,7 +1462,7 @@ public final class List
     return rw;
   }
 
-  public final List ro()
+  public final List<V> ro()
   {
     if (readonly) return this;
     if (readonlyList == null)
@@ -1479,11 +1519,180 @@ public final class List
     // it so it remains immutable
     if (readonlyList != null)
     {
-      Object[] temp = newArray(size);
+      V[] temp = newArray(size);
       System.arraycopy(values, 0, temp, 0, size);
       readonlyList.values = temp;
       readonlyList = null;
     }
+  }
+
+//////////////////////////////////////////////////////////////////////////
+// java.util.List
+//////////////////////////////////////////////////////////////////////////
+
+
+  public final int size()
+  {
+    return size;
+  }
+
+  public final V get(int index)
+  {
+    if (index < 0 || index >= size) throw IndexErr.make(""+index);
+    return values[index];
+  }
+
+  public final V set(int index, V value)
+  {
+    V old = get(index);
+    set((long)index, value);
+    return old;
+  }
+
+  public final int indexOf(Object value)
+  {
+    Long index = index((V)value);
+    return index == null ? -1 : index.intValue();
+  }
+
+  public final int lastIndexOf(Object value)
+  {
+    Long index = indexr((V)value);
+    return index == null ? -1 : index.intValue();
+  }
+
+  public final boolean containsAll(Collection<?> c)
+  {
+    return containsAll(new List(Sys.ObjType, c));
+  }
+
+  public final List<V> subList(int fromIndex, int toIndex)
+  {
+    return getRange(Range.makeExclusive(fromIndex, toIndex));
+  }
+
+  public final boolean add(V value)
+  {
+    _add(value);
+    return true;
+  }
+
+  public final void add(int index, V value)
+  {
+    insert(index, value);
+  }
+
+  public final boolean addAll(Collection<? extends V> c)
+  {
+    return addAll(size(), c);
+  }
+
+  public final boolean addAll(int index, Collection<? extends V> c)
+  {
+    insertAll(index, new List(Sys.ObjType, c));
+    return true;
+  }
+
+  public final boolean remove(Object value)
+  {
+    return _remove((V)value) == value;
+  }
+
+  public final V remove(int index)
+  {
+    return removeAt(index);
+  }
+
+  public final boolean removeAll(Collection<?> c)
+  {
+    removeAll(new List(Sys.ObjType, c));
+    return true;
+  }
+
+  public final boolean retainAll(Collection<?> c)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  public final void clear()
+  {
+    _clear();
+  }
+
+  public final Iterator<V> iterator()
+  {
+    return new ListItr(0);
+  }
+
+  public final ListIterator<V> listIterator()
+  {
+    return new ListItr(0);
+  }
+
+  public final ListIterator<V> listIterator(int index)
+  {
+    return new ListItr(index);
+  }
+
+  private class ListItr implements ListIterator
+  {
+    ListItr(int index)
+    {
+      cursor = index;
+    }
+
+    public boolean hasNext()
+    {
+      return cursor != size;
+    }
+
+    public boolean hasPrevious()
+    {
+      return cursor != 0;
+    }
+
+    public Object next()
+    {
+      int i = cursor + 1;
+      if (i >= size) throw new NoSuchElementException();
+      cursor = i;
+      return (V) values[cursor];
+    }
+
+    public int nextIndex()
+    {
+      return cursor;
+    }
+
+    public int previousIndex()
+    {
+      return cursor - 1;
+    }
+
+    public Object previous()
+    {
+      int i = cursor - 1;
+      if (cursor < 0) throw new NoSuchElementException();
+      cursor = i;
+      return (V) values[cursor];
+    }
+
+    public void set(Object e)
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    public void add(Object e)
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    public void remove()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    private int cursor;
   }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1493,11 +1702,11 @@ public final class List
   private static final Object[] empty = new Object[0];
 
   private Type of;
-  private Object[] values;
+  private V[] values;
   private int size;
   private boolean readonly;
   private boolean immutable;
-  private List readonlyList;
+  private List<V> readonlyList;
 
 }
 

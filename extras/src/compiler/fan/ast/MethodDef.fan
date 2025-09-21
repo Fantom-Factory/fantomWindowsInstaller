@@ -20,20 +20,20 @@ class MethodDef : SlotDef, CMethod
   public static MethodDef makeStaticInit(Loc loc, TypeDef parent, Block? block)
   {
     def := make(loc, parent)
-    def.name   = "static\$init"
-    def.flags  = FConst.Private + FConst.Static + FConst.Synthetic
-    def.ret    = parent.ns.voidType
-    def.code   = block
+    def.name    = "static\$init"
+    def.flags   = FConst.Private + FConst.Static + FConst.Synthetic
+    def.returns = parent.ns.voidType
+    def.code    = block
     return def;
   }
 
   public static MethodDef makeInstanceInit(Loc loc, TypeDef parent, Block? block)
   {
     def := make(loc, parent)
-    def.name   = "instance\$init\$$parent.pod.name\$$parent.name";
-    def.flags  = FConst.Private + FConst.Synthetic
-    def.ret    = parent.ns.voidType
-    def.code   = block
+    def.name    = "instance\$init\$$parent.pod.name\$$parent.name";
+    def.flags   = FConst.Private + FConst.Synthetic
+    def.returns = parent.ns.voidType
+    def.code    = block
     return def;
   }
 
@@ -42,7 +42,7 @@ class MethodDef : SlotDef, CMethod
   {
     this.name = name
     this.flags = flags
-    this.ret = parent.ns.error
+    this.returns = parent.ns.error
     paramDefs = ParamDef[,]
     vars = MethodVar[,]
   }
@@ -79,7 +79,7 @@ class MethodDef : SlotDef, CMethod
   Bool isItBlockCtor()
   {
     if (!isCtor || params.isEmpty) return false
-    lastArg := params.last.paramType.deref.toNonNullable as FuncType
+    lastArg := params.last.type.deref.toNonNullable as FuncType
     if (lastArg == null || lastArg.params.size != 1) return false
     return true
   }
@@ -114,6 +114,22 @@ class MethodDef : SlotDef, CMethod
   }
 
   **
+  ** Get or create a shadow variable in this closure method to shadow
+  ** a variable from an outer scope
+  **
+  MethodVar getOrAddShadowVar(MethodVar binding, Block? scope)
+  {
+    name := binding.name
+    dup := vars.find |v| { v.name == name }
+    if (dup != null) return dup
+
+    shadow := addLocalVar(binding.ctype, name, scope)
+    shadow.usedInClosure = true
+    shadow.shadows = binding
+    return shadow
+  }
+
+  **
   ** Add a parameter to the end of the method signature and
   ** initialize the param MethodVar.
   ** Note: currently this only works if no locals are defined.
@@ -128,20 +144,36 @@ class MethodDef : SlotDef, CMethod
     return var
   }
 
+  ** Generate unique varaible name for transpiler.
+  ** This name is **not** mapped into Fantom as local var like addLocalVar.
+  Str transpileTempVar()
+  {
+    n := "_temp" + transpileTempCount
+    transpileTempCount++
+    return n
+  }
+  private Int transpileTempCount
+
 //////////////////////////////////////////////////////////////////////////
 // CMethod
 //////////////////////////////////////////////////////////////////////////
 
   override Str signature() { qname + "(" + params.join(",") + ")" }
 
-  override CType returnType() { ret }
+  override CType returns
 
-  override CType inheritedReturnType()
+  @Deprecated CType ret
+  {
+    get { returns }
+    set { returns = it }
+  }
+
+  override CType inheritedReturns()
   {
     if (inheritedRet != null)
       return inheritedRet
     else
-      return ret
+      return returns
   }
 
   override CParam[] params() { paramDefs }
@@ -174,7 +206,7 @@ class MethodDef : SlotDef, CMethod
   override Void print(AstWriter out)
   {
     printFacets(out)
-    out.flags(flags).w(ret).w(" ").w(name).w("(")
+    out.flags(flags).w(returns).w(" ").w(name).w("(")
     paramDefs.each |ParamDef p, Int i|
     {
       if (i > 0) out.w(", ")
@@ -192,8 +224,7 @@ class MethodDef : SlotDef, CMethod
 // Fields
 //////////////////////////////////////////////////////////////////////////
 
-  CType ret              // return type
-  CType? inheritedRet    // used for original return if covariant
+  CType? inheritedRet   // used for original return if covariant
   ParamDef[] paramDefs   // parameter definitions
   Block? code            // code block
   CallExpr? ctorChain    // constructor chain for this/super ctor
@@ -201,3 +232,4 @@ class MethodDef : SlotDef, CMethod
   FieldDef? accessorFor  // if accessor method for field
   Bool usesCvars         // does this method have locals enclosed by closure
 }
+

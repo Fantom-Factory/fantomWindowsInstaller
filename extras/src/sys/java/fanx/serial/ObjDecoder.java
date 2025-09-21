@@ -180,7 +180,7 @@ public class ObjDecoder
     if (m == null)
     {
       // fallback to valueOf for java.lang.Enums
-      if (t instanceof JavaType) m = t.method("valueOf", false);
+      if (t.x.isJava()) m = t.method("valueOf", false);
       if (m == null)
         throw err("Missing method: " + t.qname() + ".fromStr", line);
     }
@@ -211,8 +211,8 @@ public class ObjDecoder
    */
   private Object readComplex(int line, Type t, boolean root)
   {
-    Map toSet = new Map(Sys.FieldType, Sys.ObjType.toNullable());
-    List toAdd = new List(Sys.ObjType.toNullable());
+    Map toSet = Map.make(Sys.FieldType, Sys.ObjType.toNullable());
+    List toAdd = List.make(Sys.ObjType.toNullable(), 8);
 
     // read fields/collection into toSet/toAdd
     readComplexFields(t, toSet, toAdd);
@@ -225,7 +225,7 @@ public class ObjDecoder
     // get argument lists
     List args = null;
     if (root && options != null && options.get("makeArgs") != null)
-      args = new List(Sys.ObjType).addAll((List)options.get("makeArgs"));
+      args = List.make(Sys.ObjType, 8).addAll((List)options.get("makeArgs"));
 
     // construct object
     Object obj = null;
@@ -237,7 +237,7 @@ public class ObjDecoder
       Param p = (Param)makeCtor.params().last();
       if (p != null && p.type().fits(Sys.FuncType) && t.isConst())
       {
-        if (args == null) args = new List(Sys.ObjType);
+        if (args == null) args = List.make(Sys.ObjType, 8);
         args.add(Field.makeSetFunc(toSet));
         setAfterCtor = false;
       }
@@ -262,7 +262,7 @@ public class ObjDecoder
     }
 
     // add
-    if (toAdd.size() > 0)
+    if (toAdd.sz() > 0)
     {
       Method addMethod = t.method("add", false);
       if (addMethod == null) throw err("Method not found: " + t.qname() + ".add", line);
@@ -395,7 +395,7 @@ public class ObjDecoder
       peekType = readType(true);
 
       // if we have [mapType] then this is non-inferred type signature
-      if (curt == Token.RBRACKET && peekType instanceof MapType)
+      if (curt == Token.RBRACKET && peekType.x.isMap())
       {
         t = peekType; peekType = null;
         consume();
@@ -406,7 +406,7 @@ public class ObjDecoder
       }
 
       // if the type was a FFI JavaType, this isn't a collection
-      if (peekType != null && peekType.isJava())
+      if (peekType != null && peekType.x.isJava())
         return readObj(curField, peekType, false);
     }
 
@@ -415,7 +415,7 @@ public class ObjDecoder
     {
       consume();
       consume(Token.RBRACKET, "Expecting ']'");
-      return new List(toListOfType(t, curField, false));
+      return List.make(toListOfType(t, curField, false));
     }
 
     // handle special case of [:]
@@ -423,7 +423,7 @@ public class ObjDecoder
     {
       consume();
       consume(Token.RBRACKET, "Expecting ']'");
-      return new Map(toMapType(t, curField, false));
+      return toMapType(t, curField, false).x.makeMap(null);
     }
 
     // read first list item or first map key
@@ -464,14 +464,14 @@ public class ObjDecoder
     // infer type if needed
     if (of == null) of = Type.common(acc, n);
 
-    return new List(of, acc, n);
+    return List.make(of, acc, n);
   }
 
   /**
    * map     := "[" mapPair ("," mapPair)* "]"
    * mapPair := obj ":" + obj
    */
-  private Object readMap(MapType mapType, Object firstKey)
+  private Object readMap(Type mapType, Object firstKey)
   {
     // setup accumulator
     LinkedHashMap map = new LinkedHashMap();
@@ -498,10 +498,10 @@ public class ObjDecoder
       int size = map.size();
       Type k = Type.common(map.keySet().toArray(new Object[size]), size);
       Type v = Type.common(map.values().toArray(new Object[size]), size);
-      mapType = new MapType(k, v);
+      mapType = Type.makeMap(k, v);
     }
 
-    return new Map((MapType)mapType, map);
+    return mapType.x.makeMap(map);
   }
 
   /**
@@ -517,7 +517,7 @@ public class ObjDecoder
     if (curField != null)
     {
       Type ft = curField.type().toNonNullable();
-      if (ft instanceof ListType) return ((ListType)ft).v;
+      if (ft.x.isList()) return ft.x.v();
     }
     if (infer) return null;
     return Sys.ObjType.toNullable();
@@ -530,28 +530,24 @@ public class ObjDecoder
    *   3) if inferred is false, then drop back to Obj:Obj
    *   4) If inferred is true then return null and we'll infer the common key/val types
    */
-  private MapType toMapType(Type t, Field curField, boolean infer)
+  private Type toMapType(Type t, Field curField, boolean infer)
   {
-    if (t != null)
-    {
-      try { return (MapType)t; }
-      catch (ClassCastException e) { throw err("Invalid map type: " + t); }
-    }
+    if (t != null && t.x.isMap()) return t;
 
     if (curField != null)
     {
       Type ft = curField.type().toNonNullable();
-      if (ft instanceof MapType) return (MapType)ft;
+      if (ft.x.isMap()) return ft;
     }
 
     if (infer) return null;
 
     if (defaultMapType == null)
-      defaultMapType = new MapType(Sys.ObjType, Sys.ObjType.toNullable());
+      defaultMapType = Type.makeMap(Sys.ObjType, Sys.ObjType.toNullable());
     return defaultMapType;
   }
 
-  private static MapType defaultMapType;
+  private static Type defaultMapType;
 
 //////////////////////////////////////////////////////////////////////////
 // Type
@@ -580,7 +576,7 @@ public class ObjDecoder
       consume();
       boolean lbracket2 = curt == Token.LBRACKET;
       if (lbracket2) consume();
-      t = new MapType(t, readType(lbracket2));
+      t = Type.makeMap(t, readType(lbracket2));
       if (lbracket2) consume(Token.RBRACKET, "Expected closing ]");
     }
     while (curt == Token.LRBRACKET)
@@ -788,3 +784,4 @@ public class ObjDecoder
   int numUsings = 0;      // number of using imports
 
 }
+

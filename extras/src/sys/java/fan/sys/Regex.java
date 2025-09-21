@@ -10,7 +10,7 @@ package fan.sys;
 import java.util.regex.*;
 
 /**
- * Regex
+ * Regex represents a regular expression.
  */
 public final class Regex
   extends FanObj
@@ -115,8 +115,8 @@ public final class Regex
     return new RegexMatcher(pattern.matcher(s));
   }
 
-  public List split(String s) { return split(s, 0L); }
-  public List split(String s, long limit)
+  public List<String> split(String s) { return split(s, 0L); }
+  public List<String> split(String s, long limit)
   {
     return new List(pattern.split(s, (int)limit));
   }
@@ -131,3 +131,4 @@ public final class Regex
   private Pattern pattern;
   private String flags;
 }
+

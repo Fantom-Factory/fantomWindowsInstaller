@@ -156,36 +156,76 @@ class JarDist : JdkTask
   private Void reflect(Str podName)
   {
     copyOpts := ["overwrite":true]
+    podFile := Env.cur.findPodFile(podName) ?: throw Err("Pod file not found: $podName")
+    doReflect(podName, podFile) |path, file|
+    {
+      file.copyTo(tempDir + path, copyOpts)
+      return true
+    }
+    doReflectPodManifest(podNames.dup.add("sys")) |path, file|
+    {
+      file.copyTo(tempDir + path, copyOpts)
+    }
+  }
+
+  static Void doReflect(Str podName, File podFile, |Uri path, File->Bool| onFile)
+  {
     resources := Str[,]
-    zip := Zip.open(Env.cur.findPodFile(podName))
+    zip := Zip.open(podFile)
     zip.contents.each |f|
     {
       if (f.isDir) return
       if (f.name == "meta.props" || f.ext == "def" || f.ext == "fcode")
       {
-        dest := tempDir + "reflect/${podName}${f.pathStr}".toUri
-        f.copyTo(dest, copyOpts)
+        onFile("reflect/${podName}${f.pathStr}".toUri, f)
       }
       else
       {
         // decide if this is a resource file we should bundle
         if (f.ext == "class") return
         if (f.ext == "apidoc") return
+        if (f.ext == "fan") return
 
-        resources.add(f.pathStr)
-        dest := tempDir + "res/${podName}${f.pathStr}".toUri
-        f.copyTo(dest, copyOpts)
+        wrote := onFile("res/${podName}${f.pathStr}".toUri, f)
+        if (wrote) resources.add(f.pathStr)
       }
     }
-    (tempDir + `res/${podName}/res-manifest.txt`).out.print(resources.join("\n")).close
+
+    if (!resources.isEmpty)
+    {
+      manifest := Buf().print(resources.join("\n")).toFile(`res-manifest.txt`)
+      onFile("res/${podName}/res-manifest.txt".toUri,manifest)
+    }
+
+    zip.close
+  }
+
+  static Void doReflectPodManifest(Str[] podNames, |Uri path, File| onFile)
+  {
+    // this is the file read by JarDistEnv.findAllPodNames
+    buf := Buf()
+    buf.out.print(podNames.join("\n"))
+    uri := `reflect/pods.txt`
+    onFile(uri, buf.toFile(uri))
   }
 
   private Void etcFiles()
   {
-    copyEtcFile(`etc/sys/timezones.ftz`)
-    copyEtcFile(`etc/sys/timezone-aliases.props`, `res/sys/timezone-aliases.props`)
-    copyEtcFile(`etc/sys/ext2mime.props`, `res/sys/ext2mime.props`)
-    copyEtcFile(`etc/sys/units.txt`)
+    doEtcFiles(script.devHomeDir) |path, file|
+    {
+      file.copyTo(tempDir + path)
+    }
+  }
+
+  static Void doEtcFiles(File homeDir, |Uri path, File| onFile)
+  {
+    names := ["timezones.ftz", "timezone-aliases.props", "ext2mime.props", "units.txt"]
+    names.each |name|
+    {
+      file := homeDir + `etc/sys/$name`
+      path := "res/sys/$name".toUri
+      onFile(path, file)
+    }
   }
 
   private Void copyEtcFile(Uri uri, Uri destUri := uri)
@@ -296,3 +336,4 @@ class JarDist : JdkTask
   private File? tempDir       // initTempDir
   private File? manifestFile  // manifest
 }
+

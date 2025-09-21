@@ -11,7 +11,7 @@ import java.io.InputStream;
 import java.util.HashMap;
 
 /**
- * JarDistEnv
+ * JarDistEnv is the Env used when Fantom is packaged into Java JAR file
  */
 public class JarDistEnv
   extends Env
@@ -41,12 +41,11 @@ public class JarDistEnv
     Map props = (Map)propsCache.get(path);
     if (props == null)
     {
-      InputStream in = JarDistEnv.class.getClassLoader().getResourceAsStream(path);
+      InStream in = resInStream(pod.name(), uri.toStr());
       if (in != null)
       {
-        InStream sysIn = new SysInStream(in);
-        props = sysIn.readProps();
-        sysIn.close();
+        props = in.readProps();
+        in.close();
       }
       props = (props == null) ? Sys.emptyStrStrMap : (Map)props.toImmutable();
       propsCache.put(path, props);
@@ -66,6 +65,19 @@ public class JarDistEnv
     File f = findFile(uri, false);
     if (f == null) return Sys.FileType.emptyList();
     return new List(Sys.FileType, new File[] { f });
+  }
+
+  public List<String> findAllPodNames()
+  {
+    InStream in = jarInStream("reflect/pods.txt", true);
+    try
+    {
+      return in.readAllLines();
+    }
+    finally
+    {
+      in.close();
+    }
   }
 
 //////////////////////////////////////////////////////////////////////////
@@ -104,6 +116,42 @@ public class JarDistEnv
     {
       return super.loadTypeClasses(t);
     }
+  }
+
+  /**
+   * Load the index file for given pod without necessarily requiring
+   * the pod to be opened. In a standard environment we just open the
+   * zip to read out the "index.props".
+   */
+  public Map<String, List<String>> readIndexProps(String podName)
+    throws Exception
+  {
+    InStream in = resInStream(podName, "index.props");
+    if (in == null) return null;
+    return in.readPropsListVals();
+  }
+
+//////////////////////////////////////////////////////////////////////////
+// Utils
+//////////////////////////////////////////////////////////////////////////
+
+  /**
+   * Get pod resource file or null
+   */
+  private InStream resInStream(String podName, String uri)
+  {
+    return jarInStream("res/" + podName + "/" + uri, false);
+  }
+
+  /**
+   * Get resource file from my jar or null.
+   */
+  private InStream jarInStream(String path, boolean checked)
+  {
+    InputStream in = JarDistEnv.class.getClassLoader().getResourceAsStream(path);
+    if (in != null) return new SysInStream(in);
+    if (checked) throw Err.make("Missing jar file: " + path);
+    return null;
   }
 
 //////////////////////////////////////////////////////////////////////////

@@ -468,7 +468,7 @@ public class Parser : CompilerSupport
     field.facets = facets
     field.flags  = flags
     field.name   = name
-    if (type != null) field.fieldType = type
+    if (type != null) field.type = type
 
     // const always has storage, otherwise assume no storage
     // until proved otherwise in ResolveExpr step or we
@@ -536,9 +536,9 @@ public class Parser : CompilerSupport
     loc := f.loc
     get := MethodDef(loc, f.parentDef)
     get.accessorFor = f
-    get.flags = f.flags.or(FConst.Getter)
-    get.name  = f.name
-    get.ret   = f.fieldType
+    get.flags   = f.flags.or(FConst.Getter)
+    get.name    = f.name
+    get.returns = f.type
     f.get = get
   }
 
@@ -548,10 +548,10 @@ public class Parser : CompilerSupport
     loc := f.loc
     set := MethodDef(loc, f.parentDef)
     set.accessorFor = f
-    set.flags = f.flags.or(FConst.Setter)
-    set.name  = f.name
-    set.ret   = ns.voidType
-    set.params.add(ParamDef(loc, f.fieldType, "it"))
+    set.flags   = f.flags.or(FConst.Setter)
+    set.name    = f.name
+    set.returns = ns.voidType
+    set.params.add(ParamDef(loc, f.type, "it"))
     f.set = set
   }
 
@@ -649,11 +649,11 @@ public class Parser : CompilerSupport
   private MethodDef methodDef(Loc loc, TypeDef parent, DocDef? doc, FacetDef[]? facets, Int flags, TypeRef ret, Str name)
   {
     method := MethodDef(loc, parent)
-    method.docDef = doc
-    method.facets = facets
-    method.flags  = flags
-    method.ret    = ret
-    method.name   = name
+    method.docDef  = doc
+    method.facets  = facets
+    method.flags   = flags
+    method.returns = ret
+    method.name    = name
 
     // if This is returned, then we configure inheritedRet
     // right off the bat (this is actual signature we will use)

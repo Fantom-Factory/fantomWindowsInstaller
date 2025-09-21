@@ -8,23 +8,30 @@
 package fan.sys;
 
 /**
- * Weekday
+ * Enum for seven days of the week.
  */
 public final class Weekday
   extends Enum
 {
+  public static final int SUN = 0;
+  public static final int MON = 1;
+  public static final int TUE = 2;
+  public static final int WED = 3;
+  public static final int THU = 4;
+  public static final int FRI = 5;
+  public static final int SAT = 6;
 
-  public static final Weekday sun = new Weekday(0, "sun");
-  public static final Weekday mon = new Weekday(1, "mon");
-  public static final Weekday tue = new Weekday(2, "tue");
-  public static final Weekday wed = new Weekday(3, "wed");
-  public static final Weekday thu = new Weekday(4, "thu");
-  public static final Weekday fri = new Weekday(5, "fri");
-  public static final Weekday sat = new Weekday(6, "sat");
+  public static final Weekday sun = new Weekday(SUN, "sun");
+  public static final Weekday mon = new Weekday(MON, "mon");
+  public static final Weekday tue = new Weekday(TUE, "tue");
+  public static final Weekday wed = new Weekday(WED, "wed");
+  public static final Weekday thu = new Weekday(THU, "thu");
+  public static final Weekday fri = new Weekday(FRI, "fri");
+  public static final Weekday sat = new Weekday(SAT, "sat");
 
   static final Weekday[] array = { sun, mon, tue, wed, thu, fri, sat };
 
-  public static final List vals = (List)new List(Sys.WeekdayType, array).toImmutable();
+  public static final List<Weekday> vals = (List)new List(Sys.WeekdayType, array).toImmutable();
 
   private Weekday(int ordinal, String name)
   {
@@ -81,7 +88,7 @@ public final class Weekday
     return fromStr(Env.cur().locale(Sys.sysPod, "weekdayStart", "sun", locale));
   }
 
-  public static List localeVals()
+  public static List<Weekday> localeVals()
   {
     Weekday start = localeStartOfWeek();
     List list = localeVals[start.ord];
@@ -100,3 +107,4 @@ public final class Weekday
   final String localeAbbrKey;
   final String localeFullKey;
 }
+

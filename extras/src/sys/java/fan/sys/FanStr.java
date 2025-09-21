@@ -14,18 +14,17 @@ import fanx.serial.*;
 import fanx.util.StrUtil;
 
 /**
- * FanString defines the methods for sys::Str.  The actual
+ * FanString defines the methods for sys::Str. The actual
  * class used for representation is java.lang.String.
  */
 public class FanStr
 {
-
-  public static String fromChars(List chars)
+  public static String fromChars(final List<Long> chars)
   {
     if (chars.sz() == 0) return "";
     StringBuilder s = new StringBuilder(chars.sz());
     for (int i=0; i<chars.sz(); ++i)
-      s.append((char)((Long)chars.get(i)).longValue());
+      s.appendCodePoint(chars.get(i).intValue());
     return s.toString();
   }
 
@@ -318,13 +317,12 @@ public class FanStr
 // Iterators
 //////////////////////////////////////////////////////////////////////////
 
-  public static List chars(String self)
+  public static List<Long> chars(final String self)
   {
     int len = self.length();
     if (len == 0) return Sys.IntType.emptyList();
-    Long[] chars = new Long[len];
-    for (int i=0; i<len; ++i) chars[i] = Long.valueOf(self.charAt(i));
-    return new List(Sys.IntType, chars);
+    final Long[] codePoints = self.codePoints().asLongStream().boxed().toArray(Long[]::new);
+    return new List<>(Sys.IntType, codePoints);
   }
 
   public static void each(String self, Func f)
@@ -650,9 +648,9 @@ public class FanStr
     return trimmed.length() == 0 ? null : trimmed;
   }
 
-  public static List split(String self) { return split(self, null, true); }
-  public static List split(String self, Long separator) { return split(self, separator, true); }
-  public static List split(String self, Long separator, boolean trimmed)
+  public static List<String> split(String self) { return split(self, null, true); }
+  public static List<String> split(String self, Long separator) { return split(self, separator, true); }
+  public static List<String> split(String self, Long separator, boolean trimmed)
   {
     if (separator == null) return splitws(self);
     int sep = separator.intValue();
@@ -700,7 +698,7 @@ public class FanStr
     return toks;
   }
 
-  public static List splitLines(String self)
+  public static List<String> splitLines(String self)
   {
     List lines = new List(Sys.StrType, 16);
     int len = self.length();
@@ -893,13 +891,12 @@ public class FanStr
   public static Regex toRegex(String self) { return Regex.fromStr(self); }
 
   public static String toCode(String self) { return toCode(self, FanInt.pos['"'], false); }
-  public static String toCode(String self, Long quote) { return toCode(self, quote, false); }
-  public static String toCode(String self, Long quote, boolean escapeUnicode)
+  public static String toCode(final String self, final Long quote) { return toCode(self, quote, false); }
+  public static String toCode(final String self, final Long quote, final boolean escapeUnicode)
   {
     StringBuilder s = new StringBuilder(self.length()+10);
 
     // opening quote
-    boolean escu = escapeUnicode;
     int q = 0;
     if (quote != null)
     {
@@ -908,10 +905,10 @@ public class FanStr
     }
 
     // NOTE: these escape sequences are duplicated in ObjEncoder
-    int len = self.length();
-    for (int i=0; i<len; ++i)
+    final int len = self.length();
+    for (int i=0; i<len; )
     {
-      int c = self.charAt(i);
+      final int c = self.codePointAt(i);
       switch (c)
       {
         case '\n': s.append('\\').append('n'); break;
@@ -924,19 +921,19 @@ public class FanStr
         case '\'': if (q == '\'') s.append('\\').append('\''); else s.append((char)c); break;
         case '$':  s.append('\\').append('$'); break;
         default:
-          if (c < ' ' || (escu && c > 127))
+          if (c < ' ' || (escapeUnicode && c > 127))
           {
-            s.append('\\').append('u')
-             .append((char)hex((c>>12)&0xf))
-             .append((char)hex((c>>8)&0xf))
-             .append((char)hex((c>>4)&0xf))
-             .append((char)hex(c&0xf));
+            // always encode using \\u{X} encoding
+            s.append('\\').append('u').append('{')
+                    .append(FanInt.toHex(c))
+                    .append('}');
           }
           else
           {
-            s.append((char)c);
+            s.appendCodePoint(c);
           }
       }
+      i += Character.charCount(c);
     }
 
     // closing quote
@@ -1018,3 +1015,4 @@ public class FanStr
   public static final String defVal = "";
 
 }
+

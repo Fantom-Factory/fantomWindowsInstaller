@@ -87,6 +87,11 @@ abstract class Expr : Node
   virtual Bool isAlwaysNullable() { false }
 
   **
+  ** If this an instance of CallExpr return it otherwise null
+  **
+  virtual CallExpr? asCall() { null }
+
+  **
   ** Assignments to instance fields require a temporary local variable.
   **
   virtual Bool assignRequiresTempVar() { false }
@@ -814,7 +819,7 @@ class CallExpr : NameExpr
     : this.make(loc, target, method.name, ExprId.call)
   {
     this.method = method
-    this.ctype = method.isCtor ? method.parent : method.returnType
+    this.ctype = method.isCtor ? method.parent : method.returns
     if (args != null) this.args = args
   }
 
@@ -842,7 +847,17 @@ class CallExpr : NameExpr
     return true
   }
 
+  override CallExpr? asCall() { this }
+
   virtual Bool isCompare() { false }
+
+  // get non-nullable target
+  Expr targetx()
+  {
+    if (target != null) return target
+    if (method.isStatic || method.isCtor) return StaticTargetExpr(loc, method.parent)
+    throw Err("Call missing target: $this")
+  }
 
   override Void walkChildren(Visitor v)
   {
@@ -1046,7 +1061,7 @@ class FieldExpr : NameExpr
     {
       this.name  = field.name
       this.field = field
-      this.ctype = field.fieldType
+      this.ctype = field.type
     }
   }
 
@@ -1164,6 +1179,8 @@ class LocalVarExpr : Expr
 
   virtual Int register() { var.register }
 
+  virtual Str name() { var.name }
+
   override Str toStr()
   {
     if (var == null) return "???"
@@ -1248,6 +1265,8 @@ class ItExpr : LocalVarExpr
   override Bool isAssignable() { false }
 
   override Int register() { 1 }  // Void doCall(Type it)
+
+  override Str name() { "it" }
 
   override Str toStr() { "it" }
 }
@@ -1535,14 +1554,14 @@ class ClosureExpr : Expr
       doCall.paramDefs.each |ParamDef p, Int i|
       {
         if (i < signature.params.size)
-          p.paramType = signature.params[i]
+          p.type = signature.params[i]
       }
 
       // update return, we might have to translate an single
       // expression statement into a return statement
-      if (doCall.ret.isVoid && !t.ret.isVoid)
+      if (doCall.returns.isVoid && !t.returns.isVoid)
       {
-        doCall.ret = t.ret
+        doCall.returns = t.returns
         collapseExprAndReturn(doCall)
         collapseExprAndReturn(call)
       }

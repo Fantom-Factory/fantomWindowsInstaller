@@ -98,7 +98,7 @@ public class StrBuf
 
   public StrBuf addChar(long ch)
   {
-    sb.append((char)ch);
+    sb.appendCodePoint((int)ch);
     return this;
   }
 
@@ -116,6 +116,13 @@ public class StrBuf
     String s = (x == null) ? "null" : toStr(x);
     if (sb.length() > 0) sb.append(sep);
     sb.append(s);
+    return this;
+  }
+
+  public StrBuf joinNotNull(Object x) { return joinNotNull(x, " "); }
+  public StrBuf joinNotNull(Object x, String sep)
+  {
+    if (x != null) join(x, sep);
     return this;
   }
 

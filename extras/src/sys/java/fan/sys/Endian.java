@@ -8,18 +8,21 @@
 package fan.sys;
 
 /**
- * Endian
+ * Endian models byte ordering
  */
 public final class Endian
   extends Enum
 {
 
-  public static final Endian big    = new Endian(0, "big");
-  public static final Endian little = new Endian(1, "little");
+  public static final int BIG    = 0;
+  public static final int LITTLE = 1;
+
+  public static final Endian big    = new Endian(BIG, "big");
+  public static final Endian little = new Endian(LITTLE, "little");
 
   static final Endian[] array = { big, little };
 
-  public static final List vals = (List)new List(Sys.EndianType, array).toImmutable();
+  public static final List<Endian> vals = (List)new List(Sys.EndianType, array).toImmutable();
 
   private Endian(int ordinal, String name)
   {
@@ -35,3 +38,4 @@ public final class Endian
   public Type typeof() { return Sys.EndianType; }
 
 }
+

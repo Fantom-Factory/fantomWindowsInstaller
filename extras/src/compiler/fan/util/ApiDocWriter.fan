@@ -71,7 +71,7 @@ class ApiDocWriter
 
   private Void writeFieldStart(FieldDef f)
   {
-    w(slotPrefix).w(f.name).w(" ").w(f.fieldType.signature)
+    w(slotPrefix).w(f.name).w(" ").w(f.type.signature)
     if (f.init != null) w(":=").w(encodeExpr(f.init))
     w("\n")
 
@@ -84,11 +84,11 @@ class ApiDocWriter
     w(slotPrefix).w(m.name).w("(\n")
     m.paramDefs.each |p, i|
     {
-      w(p.name).w(" ").w(p.paramType.signature)
+      w(p.name).w(" ").w(p.type.signature)
       if (p.def != null) w(":=").w(encodeExpr(p.def))
       w("\n")
     }
-    w(") ").w(m.returnType.signature).w("\n")
+    w(") ").w(m.returns.signature).w("\n")
   }
 
 //////////////////////////////////////////////////////////////////////////

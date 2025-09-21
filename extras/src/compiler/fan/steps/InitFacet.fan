@@ -69,20 +69,20 @@ class InitFacet : CompilerStep
 
     // private new make() {}
     m := MethodDef(loc, curType)
-    m.name = "make"
-    m.flags = FConst.Ctor + FConst.Private + FConst.Synthetic
-    m.ret = TypeRef(loc, ns.voidType)
-    m.code = Block(loc)
+    m.name    = "make"
+    m.flags   = FConst.Ctor + FConst.Private + FConst.Synthetic
+    m.returns = TypeRef(loc, ns.voidType)
+    m.code    = Block(loc)
     m.code.stmts.add(ReturnStmt.makeSynthetic(loc))
     curType.addSlot(m)
 
     // const static CurType defVal := make()
     f := FieldDef(loc, curType)
-    f.docDef    = DocDef(loc, ["Singleton for $curType.name facet."])
-    f.flags     = FConst.Public + FConst.Static + FConst.Const + FConst.Storage
-    f.name      = "defVal"
-    f.fieldType = curType
-    f.init      = CallExpr(loc, null, "make")
+    f.docDef = DocDef(loc, ["Singleton for $curType.name facet."])
+    f.flags  = FConst.Public + FConst.Static + FConst.Const + FConst.Storage
+    f.name   = "defVal"
+    f.type   = curType
+    f.init   = CallExpr(loc, null, "make")
     curType.addSlot(f)
   }
 
@@ -97,9 +97,9 @@ class InitFacet : CompilerStep
 
     // new make(|This|? f := null) { f?.call(this) }
     m := MethodDef(loc, curType)
-    m.name = "make"
-    m.flags = FConst.Ctor + FConst.Public + FConst.Synthetic
-    m.ret = TypeRef(loc, ns.voidType)
+    m.name    = "make"
+    m.flags   = FConst.Ctor + FConst.Public + FConst.Synthetic
+    m.returns = TypeRef(loc, ns.voidType)
     m.params.add(ParamDef(loc, FuncType.makeItBlock(curType).toNullable, "f", LiteralExpr.makeNull(loc, ns)))
     m.code = Block(loc)
     m.code.stmts.add(call.toStmt)

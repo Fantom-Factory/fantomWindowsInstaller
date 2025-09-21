@@ -25,6 +25,7 @@ class ResolveExpr : CompilerStep
   new make(Compiler compiler)
     : super(compiler)
   {
+    this.coercer = Coercer(compiler)
   }
 
 //////////////////////////////////////////////////////////////////////////
@@ -498,7 +499,7 @@ class ResolveExpr : CompilerStep
 
     // resolve to Obj.trap of its override
     call.method = call.target.ctype.method("trap")
-    call.ctype = call.method.returnType
+    call.ctype = call.method.returns
 
     // if subclass has covariant return type, then insert cast
     if (call.ctype.isObj)
@@ -587,7 +588,7 @@ class ResolveExpr : CompilerStep
     // we have our resolved match
     match := matches.vals.first
     call.method = match
-    call.ctype = match.isStatic ? match.returnType : base
+    call.ctype = match.isStatic ? match.returns : base
 
     // hook to infer closure type from call or to
     // translateinto an implicit call to Obj.with
@@ -617,7 +618,7 @@ class ResolveExpr : CompilerStep
 
       // check that each parameter fits
       for (i:=0; i<args.size; ++i)
-        if (!CheckErrors.canCoerce(args[i], params[i].paramType))
+        if (!coercer.canCoerce(args[i], params[i].type))
           return
 
       // its a match!
@@ -705,8 +706,8 @@ class ResolveExpr : CompilerStep
       matches = matches.findAll |m|
       {
         if (m.params.size != 1) return false
-        paramType := m.params.first.paramType
-        return CheckErrors.canCoerce(rhs, paramType)
+        paramType := m.params.first.type
+        return coercer.canCoerce(rhs, paramType)
       }
     }
 
@@ -760,8 +761,8 @@ class ResolveExpr : CompilerStep
     get := ((ShortcutExpr)expr.target).method
     set := get.parent.method("set")
     if (set == null || set.params.size != 2 || set.isStatic ||
-        set.params[0].paramType.toNonNullable != get.params[0].paramType.toNonNullable ||
-        set.params[1].paramType.toNonNullable != get.returnType.toNonNullable)
+        set.params[0].type.toNonNullable != get.params[0].type.toNonNullable ||
+        set.params[1].type.toNonNullable != get.returns.toNonNullable)
       err("No matching 'set' method for '$get.qname'", orig.loc)
     else
       expr.setMethod = set
@@ -836,7 +837,7 @@ class ResolveExpr : CompilerStep
 
     m.paramDefs.each |ParamDef p|
     {
-      var := MethodVar.makeForParam(m, reg++, p, p.paramType.parameterizeThis(curType))
+      var := MethodVar.makeForParam(m, reg++, p, p.type.parameterizeThis(curType))
       m.vars.add(var)
     }
   }
@@ -885,9 +886,7 @@ class ResolveExpr : CompilerStep
         // create new "shadow" local var in closure body which
         // shadows the enclosed variable from parent scope,
         // we'll do further processing in ClosureVars
-        shadow := curMethod.addLocalVar(binding.ctype, binding.name, currentBlock)
-        shadow.usedInClosure = true
-        shadow.shadows = binding
+        shadow := curMethod.getOrAddShadowVar(binding, currentBlock)
 
         // if there are intervening closure scopes between
         // the original scope and current scope, then we need to
@@ -896,10 +895,7 @@ class ResolveExpr : CompilerStep
         for (p := closure.enclosingClosure; p != null; p = p.enclosingClosure)
         {
           if (binding.method === p.doCall) break
-          passThru := p.doCall.addLocalVar(binding.ctype, binding.name, p.doCall.code)
-          passThru.usedInClosure = true
-          passThru.shadows = binding
-          passThru.usedInClosure = true
+          passThru := p.doCall.getOrAddShadowVar(binding, p.doCall.code)
           last.shadows = passThru
           last = passThru
         }
@@ -994,6 +990,6 @@ class ResolveExpr : CompilerStep
   Stmt[] stmtStack  := Stmt[,]    // statement stack
   Block[] blockStack := Block[,]  // block stack used for scoping
   Bool inClosure := false         // are we inside a closure's block
-
+  Coercer coercer                 // coerce utilities
 }
 

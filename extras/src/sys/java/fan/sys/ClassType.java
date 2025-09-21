@@ -35,7 +35,7 @@ import fanx.util.*;
  *     representations to the Slots for dynamic dispatch.  We delay this
  *     until needed by Method or Field for a reflection invocation
  */
-public class ClassType
+class ClassType
   extends Type
 {
 
@@ -93,9 +93,9 @@ public class ClassType
 // Slots
 //////////////////////////////////////////////////////////////////////////
 
-  public final List fields()  { return reflect().fields.ro(); }
-  public final List methods() { return reflect().methods.ro(); }
-  public final List slots()   { return reflect().slots.ro(); }
+  public final List<Field> fields()  { return reflect().fields.ro(); }
+  public final List<Method> methods() { return reflect().methods.ro(); }
+  public final List<Slot> slots()   { return reflect().slots.ro(); }
 
   public final Slot slot(String name, boolean checked)
   {
@@ -116,9 +116,9 @@ public class ClassType
 
   public Type base() { return base; }
 
-  public List mixins() { return mixins; }
+  public List<Type> mixins() { return mixins; }
 
-  public List inheritance()
+  public List<Type> inheritance()
   {
     if (inheritance == null) inheritance = inheritance(this);
     return inheritance;
@@ -205,7 +205,7 @@ public class ClassType
 // Facets
 //////////////////////////////////////////////////////////////////////////
 
-  public List facets()
+  public List<Facet> facets()
   {
     if (inheritedFacets == null) loadFacets();
     return inheritedFacets .list();
@@ -255,6 +255,8 @@ public class ClassType
     }
     return doc;
   }
+
+  public void docSet(String d) { this.doc = d; }
 
 //////////////////////////////////////////////////////////////////////////
 // Conversion
@@ -525,8 +527,11 @@ public class ClassType
     }
     catch (Exception e)
     {
-      System.out.println("ERROR: Invalid precompiled class missing aux: " + qname);
-      e.printStackTrace();
+      if (!Sys.isJarDist)
+      {
+        System.out.println("ERROR: Invalid precompiled class missing aux: " + qname);
+        e.printStackTrace();
+      }
     }
   }
 
@@ -554,7 +559,7 @@ public class ClassType
         // mixin then we do this for both the interface and
         // the static methods only of the implementation class
         finishSlots(cls, false);
-        if (isMixin()) finishSlots(auxCls, true);
+        if (auxCls != null) finishSlots(auxCls, true);
 
         finished = true;
 
@@ -619,6 +624,11 @@ catch (Exception e) { e.printStackTrace(); }
     if (pod == Sys.sysPod && !Modifier.isPublic(m.getModifiers())) return;
     this.finishing = m.getName();
     String name = m.getName();
+    if (name.charAt(0) == '_' && pod.name().equals("sys"))
+    {
+      // List/Map swizzles
+      name = name.substring(1, name.length());
+    }
     Slot slot = slot(name, false);
     if (slot == null) return;
     if (slot.parent() != this) return;
@@ -649,6 +659,11 @@ catch (Exception e) { e.printStackTrace(); }
       if (pod == Sys.sysPod)
       {
         if (!checkAllFan(params)) return;
+        if (this.name.equals("Map"))
+        {
+          // we overload Map.make
+          if (name.equals("make") && params.length == 2) return;
+        }
         if (javaRepr)
         {
           boolean javaStatic = Modifier.isStatic(m.getModifiers());
@@ -662,10 +677,11 @@ catch (Exception e) { e.printStackTrace(); }
     }
     else
     {
+      // note in Java transpiler we generate getter for const fields too
       Field field = (Field)slot;
       if (m.getReturnType() == void.class)
         field.setter.reflect = new java.lang.reflect.Method[] { m };
-      else
+      else if (field.getter != null)
         field.getter.reflect = new java.lang.reflect.Method[] { m };
     }
   }

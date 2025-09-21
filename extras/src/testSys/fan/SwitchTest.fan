@@ -153,22 +153,50 @@ class SwitchTest : Test
   Obj? three() { return 3 }
 
 //////////////////////////////////////////////////////////////////////////
-// Int TableSwitch
+// Str Switch (supported in Java source)
+//////////////////////////////////////////////////////////////////////////
+
+  Void testStrSwitch()
+  {
+    verifyEq(strSwitch("a"), "A")
+    verifyEq(strSwitch("b"), "B")
+    verifyEq(strSwitch("c"), "X")
+    verifyEq(strSwitch("q"), "RSQ")
+    verifyEq(strSwitch("r"), "RSQ")
+    verifyEq(strSwitch("s"), "RSQ")
+    verifyEq(strSwitch("foo"), "X")
+  }
+
+  Str strSwitch(Str s)
+  {
+    switch (s)
+    {
+      case "a": return "A"
+      case "b": return "B"
+      case "q":
+      case "r":
+      case "s": return "RSQ"
+      default: return "X"
+    }
+  }
+
+//////////////////////////////////////////////////////////////////////////
+// Enum TableSwitch
 //////////////////////////////////////////////////////////////////////////
 
   Void testEnumTableSwitch()
   {
-    verifyEq(enumTableSwitchA(SwitchEnum.zero),  "default");
-    verifyEq(enumTableSwitchA(SwitchEnum.one),   "one");
-    verifyEq(enumTableSwitchA(SwitchEnum.two),   "default");
-    verifyEq(enumTableSwitchA(SwitchEnum.three), "three");
-    verifyEq(enumTableSwitchA(SwitchEnum.four),  "default");
+    verifyEq(enumTableSwitchA(SwitchEnum.zero),  "default")
+    verifyEq(enumTableSwitchA(SwitchEnum.one),   "one")
+    verifyEq(enumTableSwitchA(SwitchEnum.two),   "default")
+    verifyEq(enumTableSwitchA(SwitchEnum.three), "three")
+    verifyEq(enumTableSwitchA(SwitchEnum.four),  "default")
 
-    verifyEq(enumTableSwitchB(SwitchEnum.zero),  "default");
-    verifyEq(enumTableSwitchB(SwitchEnum.one),   "one");
-    verifyEq(enumTableSwitchB(SwitchEnum.two),   "default");
-    verifyEq(enumTableSwitchB(SwitchEnum.three), "three");
-    verifyEq(enumTableSwitchB(SwitchEnum.four),  "default");
+    verifyEq(enumTableSwitchB(SwitchEnum.zero),  "default")
+    verifyEq(enumTableSwitchB(SwitchEnum.one),   "one")
+    verifyEq(enumTableSwitchB(SwitchEnum.two),   "default")
+    verifyEq(enumTableSwitchB(SwitchEnum.three), "three")
+    verifyEq(enumTableSwitchB(SwitchEnum.four),  "default")
   }
 
   Str? enumTableSwitchA(SwitchEnum e)
@@ -195,16 +223,65 @@ class SwitchTest : Test
   }
 
 //////////////////////////////////////////////////////////////////////////
+// Sys Enum
+//////////////////////////////////////////////////////////////////////////
+
+  Void testSysEnum()
+  {
+    verifyEq(enumSysSwitch(Weekday.tue, Month.aug, Endian.little, LogLevel.err),
+             "weekday,summer,little,bad")
+    verifyEq(enumSysSwitch(Weekday.sat, Month.nov, Endian.big, LogLevel.info),
+             "weekend,big,ok")
+  }
+
+  Str enumSysSwitch(Weekday w, Month m, Endian e, LogLevel v)
+  {
+    s := StrBuf()
+    switch (w)
+    {
+      case Weekday.mon:
+      case Weekday.tue:
+      case Weekday.wed:
+      case Weekday.thu:
+      case Weekday.fri: s.join("weekday", ",")
+      case Weekday.sat:
+      case Weekday.sun: s.join("weekend", ",")
+    }
+
+    switch (m)
+    {
+      case Month.jun:
+      case Month.jul:
+      case Month.aug: s.join("summer", ",")
+    }
+
+    switch (e)
+    {
+      case Endian.little: s.join("little", ",")
+      case Endian.big:    s.join("big", ",")
+    }
+
+    switch (v)
+    {
+      case LogLevel.err:
+      case LogLevel.warn: s.join("bad", ",")
+      default: s.join("ok", ",")
+    }
+
+    return s.toStr
+  }
+
+//////////////////////////////////////////////////////////////////////////
 // Fall Thru
 //////////////////////////////////////////////////////////////////////////
 
   Void testFallThru()
   {
-    verifyEq(fallThru(0), "even");
-    verifyEq(fallThru(1), "odd");
-    verifyEq(fallThru(2), "even");
-    verifyEq(fallThru(3), "odd");
-    verifyEq(fallThru(4), "default");
+    verifyEq(fallThru(0), "even")
+    verifyEq(fallThru(1), "odd")
+    verifyEq(fallThru(2), "even")
+    verifyEq(fallThru(3), "odd")
+    verifyEq(fallThru(4), "default")
   }
 
   Str fallThru(Int i)
@@ -225,10 +302,10 @@ class SwitchTest : Test
 
   Void testImplicitBreak()
   {
-    verifyEq(implicitBreak(0), "zero");
-    verifyEq(implicitBreak(1), "one");
-    verifyEq(implicitBreak(2), "two");
-    verifyEq(implicitBreak(3), "default");
+    verifyEq(implicitBreak(0), "zero")
+    verifyEq(implicitBreak(1), "one")
+    verifyEq(implicitBreak(2), "two")
+    verifyEq(implicitBreak(3), "default")
   }
 
   Str implicitBreak(Int i)
@@ -257,3 +334,4 @@ enum class SwitchEnum
   three,
   four
 }
+

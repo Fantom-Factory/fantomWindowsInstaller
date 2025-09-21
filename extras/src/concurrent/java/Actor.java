@@ -76,7 +76,9 @@ public class Actor
 // Obj
 //////////////////////////////////////////////////////////////////////////
 
-  public Type typeof()
+  public Type typeof() { return typeof$(); }
+
+  public static Type typeof$()
   {
     if (type == null) type = Type.find("concurrent::Actor");
     return type;
@@ -147,7 +149,7 @@ public class Actor
   {
     protected Object initialValue()
     {
-      return new Map(Sys.StrType, Sys.ObjType.toNullable());
+      return Map.make(Sys.StrType, Sys.ObjType.toNullable());
     }
   };
 
@@ -485,7 +487,7 @@ public class Actor
   {
     Context(Actor actor) { this.actor = actor; }
     final Actor actor;
-    final Map locals = new Map(Sys.StrType, Sys.ObjType.toNullable());
+    final Map locals = Map.make(Sys.StrType, Sys.ObjType.toNullable());
     Locale locale = Locale.cur();
   }
 
@@ -505,3 +507,4 @@ public class Actor
   private int receiveCount;              // total number of messages received
   private long receiveTicks;             // total ticks spend in receive
 }
+

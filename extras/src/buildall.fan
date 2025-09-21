@@ -120,6 +120,7 @@ class Build : BuildGroup
   {
     // lib dirs nuke it all
     Delete.make(this, devHomeDir + `lib/fan/`).run
+    Delete.make(this, devHomeDir + `lib/js/`).run
     Delete.make(this, devHomeDir + `lib/patches/`).run
     Delete.make(this, devHomeDir + `lib/install/`).run
 
@@ -205,6 +206,7 @@ class Build : BuildGroup
   Void deleteNonDist()
   {
     Delete(this, devHomeDir+`readme.html`).run
+    Delete(this, devHomeDir+`gen/`).run
     Delete(this, devHomeDir+`tmp/`).run
     Delete(this, devHomeDir+`temp/`).run
     Delete(this, devHomeDir+`lib/tmp/`).run
@@ -281,3 +283,4 @@ class Build : BuildGroup
   }
 
 }
+

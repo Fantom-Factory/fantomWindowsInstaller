@@ -233,7 +233,7 @@ class JavaBridge : CBridge
       else
       {
         // ensure arg fits parameter type (or auto-cast)
-        newArgs[i] = coerce(args[i], p.paramType) |->| { isErr = true }
+        newArgs[i] = coerce(args[i], p.type) |->| { isErr = true }
       }
     }
     if (isErr) return null
@@ -268,7 +268,7 @@ class JavaBridge : CBridge
     return a.method.params.all |CParam ap, Int i->Bool|
     {
       bp := b.method.params[i]
-      return ap.paramType.fits(bp.paramType)
+      return ap.type.fits(bp.type)
     }
   }
 
@@ -306,9 +306,9 @@ class JavaBridge : CBridge
     // Fantom declaration matches how it is inferred into the Fan
     // type system, then just change the return type - the compiler
     // will impliclty do all the return coercions
-    if (isOverrideInferredType(base.returnType, def.returnType))
+    if (isOverrideInferredType(base.returns, def.returns))
     {
-      def.ret = def.inheritedRet = base.returnType
+      def.returns = def.inheritedRet = base.returns
     }
 
     // if any of the parameters is a primitive or Java array
@@ -323,18 +323,18 @@ class JavaBridge : CBridge
     base.params.eachr |CParam bp, Int i|
     {
       dp := def.paramDefs[i]
-      if (!isOverrideInferredType(bp.paramType, dp.paramType)) return
+      if (!isOverrideInferredType(bp.type, dp.type)) return
 
       // add local variable: Int bar := bar_$J
       local := LocalDefStmt(def.loc)
-      local.ctype = dp.paramType
+      local.ctype = dp.type
       local.name  = dp.name
       local.init  = UnknownVarExpr(def.loc, null, dp.name + "_\$J")
       def.code.stmts.insert(0, local)
 
       // rename parameter Int bar -> int bar_$J
       dp.name = dp.name + "_\$J"
-      dp.paramType = bp.paramType
+      dp.type = bp.type
     }
   }
 
@@ -412,7 +412,7 @@ class JavaBridge : CBridge
     if (a.params.size != b.params.size) return false
     for (i:=0; i<a.params.size; ++i)
     {
-      if (a.params[i].paramType != b.params[i].paramType)
+      if (a.params[i].type != b.params[i].type)
         return false
     }
     return true
@@ -650,11 +650,11 @@ class JavaBridge : CBridge
     if (funcType.params.size > method.params.size) return false
 
     // check that func return type fits method return
-    retOk := method.returnType.isVoid || fits(funcType.ret, method.returnType)
+    retOk := method.returns.isVoid || fits(funcType.returns, method.returns)
     if (!retOk) return false
 
     // check all the method parameters fit the function parameters
-    paramsOk := funcType.params.all |CType f, Int i->Bool| { return fits(f, method.params[i].paramType) }
+    paramsOk := funcType.params.all |CType f, Int i->Bool| { return fits(f, method.params[i].type) }
     if (!paramsOk) return false
 
     return true
@@ -688,14 +688,14 @@ class JavaBridge : CBridge
     field := FieldDef(loc, cls)
     ((SlotDef)field).name = "_func"
     ((DefNode)field).flags = FConst.Private + FConst.Storage + FConst.Synthetic
-    field.fieldType = funcType
+    field.type = funcType
     cls.addSlot(field)
 
     // generate FuncWrapper.make constructor
     ctor := MethodDef(loc, cls, "make", FConst.Internal + FConst.Ctor + FConst.Synthetic)
-    ctor.ret  = ns.voidType
+    ctor.returns   = ns.voidType
     ctor.paramDefs = [ParamDef(loc, funcType, "f")]
-    ctor.code = Block.make(loc)
+    ctor.code      = Block.make(loc)
     ctor.code.stmts.add(BinaryExpr.makeAssign(
       FieldExpr(loc, ThisExpr(loc), field),
       UnknownVarExpr(loc, null, "f")).toStmt)
@@ -704,19 +704,19 @@ class JavaBridge : CBridge
 
     // generate FuncWrapper override of abstract method
     over := MethodDef(loc, cls, method.name, FConst.Public + FConst.Override + FConst.Synthetic)
-    over.ret = method.returnType
+    over.returns   = method.returns
     over.paramDefs = ParamDef[,]
-    over.code = Block.make(loc)
+    over.code      = Block.make(loc)
     callArity := "call"
     call := CallExpr.makeWithMethod(loc, FieldExpr(loc, ThisExpr(loc), field), funcType.method(callArity))
     method.params.each |CParam param, Int i|
     {
       paramName := "p$i"
-      over.params.add(ParamDef(loc, param.paramType, paramName))
+      over.params.add(ParamDef(loc, param.type, paramName))
       if (i < funcType.params.size)
         call.args.add(UnknownVarExpr(loc, null, paramName))
     }
-    if (method.returnType.isVoid)
+    if (method.returns.isVoid)
       over.code.stmts.add(call.toStmt).add(ReturnStmt(loc))
     else
       over.code.stmts.add(ReturnStmt(loc, call))
@@ -826,7 +826,7 @@ internal class CallMatch
   {
     call.args   = args
     call.method = method
-    call.ctype  = method.isCtor ? method.parent : method.returnType
+    call.ctype  = method.isCtor ? method.parent : method.returns
     return call
   }
 
@@ -835,3 +835,4 @@ internal class CallMatch
   CMethod? method    // matched method
   Expr[]? args       // coerced arguments
 }
+

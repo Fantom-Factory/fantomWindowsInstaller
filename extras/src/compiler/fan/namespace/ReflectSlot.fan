@@ -41,7 +41,7 @@ class ReflectField : ReflectSlot, CField
     this.ns = ns
     this.parent = parent
     this.f = f
-    this.fieldType = ns.importType(f.type)
+    this.type = ns.importType(f.type)
     get := (Method?)f->getter; if (get != null) this.getter = ns.importMethod(get)
     set := (Method?)f->setter; if (set != null) this.setter = ns.importMethod(set)
   }
@@ -51,13 +51,13 @@ class ReflectField : ReflectSlot, CField
 
   override Slot slot() { f }
 
-  override CType inheritedReturnType()
+  override CType inheritedReturns()
   {
-    if (!isOverride || getter == null) return fieldType
-    else return getter.inheritedReturnType
+    if (!isOverride || getter == null) return type
+    else return getter.inheritedReturns
   }
 
-  override CType fieldType { private set }
+  override CType type      { private set }
   override CMethod? getter { private set }
   override CMethod? setter { private set }
   Field f                  { private set }
@@ -74,7 +74,7 @@ class ReflectMethod : ReflectSlot, CMethod
     this.ns = ns
     this.parent = parent
     this.m = m
-    this.returnType = ns.importType(m.returns)
+    this.returns = ns.importType(m.returns)
     this.params = m.params.map |Param p->CParam| { ReflectParam(ns, p) }
     this.isGeneric = calcGeneric(this)
   }
@@ -84,16 +84,16 @@ class ReflectMethod : ReflectSlot, CMethod
 
   override Slot slot() { m }
 
-  override CType inheritedReturnType()
+  override CType inheritedReturns()
   {
     // use trap to access undocumented hook
-    if (isOverride || returnType.isThis)
-      return ns.importType((Type)m->inheritedReturnType)
+    if (isOverride || returns.isThis)
+      return ns.importType((Type)m->inheritedReturns)
     else
-      return returnType
+      return returns
   }
 
-  override CType returnType { private set }
+  override CType returns    { private set }
   override CParam[] params  { private set }
   override Bool isGeneric   { private set }
   Method m                  { private set }
@@ -108,14 +108,14 @@ class ReflectParam : CParam
   new make(ReflectNamespace ns, Param p)
   {
     this.p = p
-    this.paramType = ns.importType(p.type)
+    this.type = ns.importType(p.type)
   }
 
   override Str name() { p.name }
   override Bool hasDefault() { p.hasDefault }
 
-  override CType paramType { private set }
-  Param p                  { private set }
+  override CType type { private set }
+  Param p             { private set }
 }
 
 **************************************************************************

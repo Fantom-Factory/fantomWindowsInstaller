@@ -159,10 +159,14 @@ class TokenizerTest : Test
     verifyInt("'\\r'",    '\r')
     verifyInt("'\\''",    '\'')
     verifyInt("'\\uabcd'",'\uabcd')
+    verifyInt("'\\u{1f601}'",'\u{1f601}')
     verifyInvalid("'a")
     verifyInvalid("'ab'")
     verifyInvalid("'\\q'")
     verifyInvalid("'\\ug000'")
+    verifyInvalid("'\\u{}'")
+    verifyInvalid("'\\u{g000}'")
+    verifyInvalid("'\\u{1234567}'")
   }
 
   Void verifyInt(Str src, Int val)
@@ -341,6 +345,9 @@ class TokenizerTest : Test
     verifyInvalid("\"\\u00g0\"")
     verifyInvalid("\"\\u0g00\"")
     verifyInvalid("\"\\ug000\"")
+    verifyInvalid("\"\\u{}\"")
+    verifyInvalid("\"\\u{g000}\"")
+    verifyInvalid("\"\\u{1234567}\"")
   }
 
   Void verifyStr(Str src, Str val)
@@ -762,3 +769,4 @@ class TokenizerTest : Test
   TokenVal makeDecimal(Decimal val) { return makeToken(Token.decimalLiteral, val); }
 
 }
+

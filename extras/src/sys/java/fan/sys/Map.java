@@ -10,6 +10,7 @@ package fan.sys;
 import java.lang.Thread;
 import java.util.AbstractSet;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map.Entry;
 import java.util.LinkedHashMap;
@@ -21,9 +22,9 @@ import fanx.util.OpUtil;
 /**
  * Map is a hashmap of key value pairs.
  */
-public final class Map
+public final class Map<K,V>
   extends FanObj
-  implements Literal
+  implements Literal, java.util.Map<K,V>
 {
 
 //////////////////////////////////////////////////////////////////////////
@@ -45,17 +46,23 @@ public final class Map
     return new Map(t, new HashMap());
   }
 
-  public Map(Type k, Type v)
+  /** Construct map with given key and value types */
+  public static Map make(Type k, Type v)
+  {
+    return new Map(k, v);
+  }
+
+  Map(Type k, Type v)
   {
     this(new MapType(k, v), new HashMap());
   }
 
-  public Map(MapType type)
+  Map(MapType type)
   {
     this(type, new HashMap());
   }
 
-  public Map(MapType type, HashMap map)
+  Map(MapType type, HashMap map)
   {
     if (type == null || map == null) { Thread.dumpStack(); throw NullErr.make(); }
     this.type = type;
@@ -85,40 +92,40 @@ public final class Map
     return map.size() == 0;
   }
 
-  public final long size()
+  public final long _size()
   {
     return map.size();
   }
 
-  public final Object get(Object key)
+  public final V get(Object key)
   {
-    Object val = map.get(key);
+    V val = map.get(key);
     if (val != null) return val;
     if (this.def == null) return null;
     return map.containsKey(key) ? null : this.def;
   }
 
-  public final Object get(Object key, Object def)
+  public final V get(K key, V def)
   {
-    Object val = map.get(key);
+    V val = map.get(key);
     if (val != null) return val;
     if (def == null) return null;
     return map.containsKey(key) ? null : def;
   }
 
-  public final Object getChecked(Object key) { return getChecked(key, true); }
-  public final Object getChecked(Object key, boolean checked)
+  public final V getChecked(K key) { return getChecked(key, true); }
+  public final V getChecked(K key, boolean checked)
   {
-    Object val = map.get(key);
+    V val = map.get(key);
     if (val != null) return val;
     if (map.containsKey(key)) return null;
     if (checked) throw UnknownKeyErr.make(String.valueOf(key));
     return null;
   }
 
-  public final Object getOrThrow(Object key)
+  public final V getOrThrow(K key)
   {
-    Object val = map.get(key);
+    V val = map.get(key);
     if (val != null) return val;
     if (map.containsKey(key)) return null;
     throw UnknownKeyErr.make(String.valueOf(key));
@@ -129,7 +136,7 @@ public final class Map
     return map.containsKey(key);
   }
 
-  public final List keys()
+  public final List<K> keys()
   {
     Object[] keys = new Object[map.size()];
     Iterator it = pairsIterator();
@@ -138,12 +145,12 @@ public final class Map
     return new List(type.k, keys);
   }
 
-  public final List vals()
+  public final List<V> vals()
   {
     return new List(type.v, map.values());
   }
 
-  public final Map set(Object key, Object value)
+  public final Map<K,V> set(K key, V value)
   {
     modify();
     if (key == null)
@@ -154,13 +161,13 @@ public final class Map
     return this;
   }
 
-  public final Map setNotNull(Object key, Object value)
+  public final Map<K,V> setNotNull(K key, V value)
   {
     if (value == null) return this;
     return set(key, value);
   }
 
-  public final Map add(Object key, Object value)
+  public final Map<K,V> add(K key, V value)
   {
     modify();
     if (key == null)
@@ -173,107 +180,107 @@ public final class Map
     return this;
   }
 
-  public final Map addIfNotNull(Object key, Object value)
+  public final Map<K,V> addIfNotNull(K key, V value)
   {
     return addNotNull(key, value);
   }
 
-  public final Map addNotNull(Object key, Object value)
+  public final Map<K,V> addNotNull(K key, V value)
   {
     if (value == null) return this;
     return add(key, value);
   }
 
-  public final Object getOrAdd(Object key, Func valFunc)
+  public final V getOrAdd(K key, Func valFunc)
   {
     if (map.containsKey(key)) return map.get(key);
-    Object val = valFunc.call(key);
+    V val = (V)valFunc.call(key);
     add(key, val);
     return val;
   }
 
-  public final Map setAll(Map m)
+  public final Map<K,V> setAll(Map<K,V> m)
   {
     modify();
     Iterator it = m.pairsIterator();
     while (it.hasNext())
     {
-      Entry e = (Entry)it.next();
+      Entry<K,V> e = (Entry)it.next();
       map.put(e.getKey(), e.getValue());
     }
     return this;
   }
 
-  public final Map addAll(Map m)
+  public final Map<K,V> addAll(Map<K,V> m)
   {
     modify();
     Iterator it = m.pairsIterator();
     while (it.hasNext())
     {
-      Entry e = (Entry)it.next();
+      Entry<K,V> e = (Entry)it.next();
       add(e.getKey(), e.getValue());
     }
     return this;
   }
 
-  public final Map setList(List list) { return setList(list, null); }
-  public final Map setList(List list, Func f)
+  public final Map<K,V> setList(List<V> list) { return setList(list, null); }
+  public final Map<K,V> setList(List<V> list, Func f)
   {
     modify();
     if (f == null)
     {
       for (int i=0; i<list.sz(); ++i)
-        set(list.get(i), list.get(i));
+        set((K)list.get(i), list.get(i));
     }
     else if (f.arity() == 1)
     {
       for (int i=0; i<list.sz(); ++i)
-        set(f.call(list.get(i)), list.get(i));
+        set((K)f.call(list.get(i)), list.get(i));
     }
     else
     {
       for (int i=0; i<list.sz(); ++i)
-        set(f.call(list.get(i), Long.valueOf(i)), list.get(i));
+        set((K)f.call(list.get(i), Long.valueOf(i)), list.get(i));
     }
     return this;
   }
 
-  public final Map addList(List list) { return addList(list, null); }
-  public final Map addList(List list, Func f)
+  public final Map<K,V> addList(List<V> list) { return addList(list, null); }
+  public final Map<K,V> addList(List<V> list, Func f)
   {
     modify();
     if (f == null)
     {
       for (int i=0; i<list.sz(); ++i)
-        add(list.get(i), list.get(i));
+        add((K)list.get(i), list.get(i));
     }
     else if (f.arity() == 1)
     {
       for (int i=0; i<list.sz(); ++i)
-        add(f.call(list.get(i)), list.get(i));
+        add((K)f.call(list.get(i)), list.get(i));
     }
     else
     {
       for (int i=0; i<list.sz(); ++i)
-        add(f.call(list.get(i), Long.valueOf(i)), list.get(i));
+        add((K)f.call(list.get(i), Long.valueOf(i)), list.get(i));
     }
     return this;
   }
 
-  public final Object remove(Object key)
+  public final V remove(Object key)
   {
     modify();
     return map.remove(key);
   }
 
-  public final Map dup()
+  public final Map<K,V> dup()
   {
     Map dup = new Map(type);
     dup.map = (HashMap)this.map.clone();
     return dup;
   }
 
-  public final Map clear()
+  public final Map<K,V> _clear()
   {
     modify();
     map.clear();
@@ -329,8 +336,8 @@ public final class Map
       map = new HashMap();
   }
 
-  public final Object def() { return def; }
-  public final void def(Object v)
+  public final V def() { return def; }
+  public final void def(V v)
   {
     modify();
     if (v != null && !isImmutable(v))
@@ -402,21 +409,21 @@ public final class Map
     return null;
   }
 
-  public final Object find(Func f)
+  public final V find(Func f)
   {
     Iterator it = pairsIterator();
     while (it.hasNext())
     {
-      Entry e = (Entry)it.next();
-      Object key = e.getKey();
-      Object val = e.getValue();
+      Entry<K,V> e = (Entry)it.next();
+      K key = e.getKey();
+      V val = e.getValue();
       if (f.callBool(val, key))
         return val;
     }
     return null;
   }
 
-  public final Map findAll(Func f)
+  public final Map<K,V> findAll(Func f)
   {
     Map acc = new Map(type);
     if (this.ordered()) acc.ordered(true);
@@ -433,7 +440,7 @@ public final class Map
     return acc;
   }
 
-  public final Map findNotNull()
+  public final Map<K,V> findNotNull()
   {
     Map acc = new Map(type.k, type.v.toNonNullable());
     if (this.ordered()) acc.ordered(true);
@@ -450,7 +457,7 @@ public final class Map
     return acc;
   }
 
-  public final Map exclude(Func f)
+  public final Map<K,V> exclude(Func f)
   {
     Map acc = new Map(type);
     if (this.ordered()) acc.ordered(true);
@@ -553,7 +560,7 @@ public final class Map
   public final String join(String sep) { return join(sep, null); }
   public final String join(String sep, Func f)
   {
-    int size = (int)size();
+    int size = size();
     if (size == 0) return "";
     StringBuilder s = new StringBuilder(32+size*32);
     Iterator it = pairsIterator();
@@ -573,7 +580,7 @@ public final class Map
 
   public final String toCode()
   {
-    int size = (int)size();
+    int size = size();
     StringBuilder s = new StringBuilder(32+size*32);
     s.append(type.signature());
     s.append('[');
@@ -609,7 +616,7 @@ public final class Map
     return readonly;
   }
 
-  public final Map rw()
+  public final Map<K,V> rw()
   {
     if (!readonly) return this;
 
@@ -621,7 +628,7 @@ public final class Map
     return rw;
   }
 
-  public final Map ro()
+  public final Map<K,V> ro()
   {
     if (readonly) return this;
     if (readonlyMap == null)
@@ -706,6 +713,7 @@ public final class Map
     return map.keySet().iterator();
   }
 
+  /** Direct access to underlying hashmap */
   public HashMap toJava()
   {
     modify();
@@ -804,15 +812,64 @@ public final class Map
   }
 
 //////////////////////////////////////////////////////////////////////////
+// java.util.Map
+//////////////////////////////////////////////////////////////////////////
+
+  public final int size()
+  {
+    return map.size();
+  }
+
+  public boolean containsValue(Object val)
+  {
+    return map.containsValue(val);
+  }
+
+  public V put(K key, V val)
+  {
+    V old = get(key);
+    set(key, val);
+    return old;
+  }
+
+  public void putAll(java.util.Map<? extends K,? extends V> m)
+  {
+    for (Map.Entry<K,V> e : map.entrySet())
+    {
+      set(e.getKey(), e.getValue());
+    }
+  }
+
+  public final void clear()
+  {
+    _clear();
+  }
+
+  public Collection<V> values()
+  {
+    return map.values();
+  }
+
+  public Set<K> keySet()
+  {
+    return map.keySet();
+  }
+
+  public Set<Map.Entry<K,V>> entrySet()
+  {
+    return map.entrySet();
+  }
+
+//////////////////////////////////////////////////////////////////////////
 // Fields
 //////////////////////////////////////////////////////////////////////////
 
   private MapType type;
-  private HashMap map;
-  private Map readonlyMap;
+  private HashMap<K,V> map;
+  private Map<K,V> readonlyMap;
   private boolean readonly;
   private boolean immutable;
-  private Object def;
+  private V def;
 
 }
 

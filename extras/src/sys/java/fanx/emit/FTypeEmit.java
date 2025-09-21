@@ -179,7 +179,7 @@ public abstract class FTypeEmit
     }
     else if (isCtor && !isStatic)
     {
-      if (parent.base().isJava())
+      if (parent.base().x.isJava())
         me = new FMethodEmit(this, m).emitCtorWithJavaSuper();
       else
         me = new FMethodEmit(this, m).emitCtor();
@@ -205,7 +205,7 @@ public abstract class FTypeEmit
   {
     // if base class is normal Java class imported via FFI, then
     // the Fantom constructors are the Java constructors
-    if (parent.base().isJava()) return;
+    if (parent.base().x.isJava()) return;
 
     hasInstanceInit = true;
     MethodEmit me = emitMethod("<init>", "()V", EmitConst.PUBLIC);
@@ -219,8 +219,7 @@ public abstract class FTypeEmit
     if (funcType != null)
     {
       code.op2(GETSTATIC, typeField.ref());
-      code.op2(CHECKCAST, cls("fan/sys/FuncType"));
-      code.op2(INVOKESPECIAL, method(superClassName +".<init>(Lfan/sys/FuncType;)V"));
+      code.op2(INVOKESPECIAL, method(superClassName +".<init>(Lfan/sys/Type;)V"));
     }
     else
     {
@@ -260,7 +259,7 @@ public abstract class FTypeEmit
     if (!parent.isMixin())
     {
       Type t = parent;
-      if (parent.base() instanceof FuncType) t = parent.base();
+      if (parent.base().x.isFunc()) t = parent.base();
 
       code.op2(LDC_W, strConst(t.signature()));
       code.op2(INVOKESTATIC, method("fan/sys/Type.find(Ljava/lang/String;)Lfan/sys/Type;"));
@@ -484,9 +483,10 @@ public abstract class FTypeEmit
   FieldEmit peerField;           // public static final TypePeer peer
   boolean hasInstanceInit;       // true if we already emitted <init>
   boolean hasStaticInit;         // true if we already emitted <clinit>
-  FuncType funcType;             // if type is a function
+  Type funcType;                 // if type is a function
   HashMap typeLiteralFields;     // signature Strings we need to turn into cached fields
   boolean isNative = false;      // do we have any native methods requiring a peer
   int lineNum;                   // line number of current type (or zero)
 
 }
+

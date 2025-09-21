@@ -17,7 +17,7 @@ import fanx.emit.*;
 /**
  * MapType is the GenericType for Maps: Foo:Bar -&gt; K = Foo, V = Bar
  */
-public class MapType
+class MapType
   extends GenericType
 {
 
@@ -80,6 +80,18 @@ public class MapType
 
   public Class toClass() { return Map.class; }
 
+  boolean isMap() { return true; }
+
+  Type k() { return k; }
+
+  Type v() { return v; }
+
+  Map makeMap(HashMap map)
+  {
+    if (map == null) map = new HashMap();
+    return new Map(this, map);
+  }
+
 //////////////////////////////////////////////////////////////////////////
 // GenericType
 //////////////////////////////////////////////////////////////////////////
@@ -111,3 +123,4 @@ public class MapType
   private String sig;
 
 }
+

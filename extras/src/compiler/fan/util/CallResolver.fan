@@ -234,7 +234,7 @@ class CallResolver : CompilerSupport
     if (found is CField && !isVar)
     {
       field := (CField)found
-      if (field.fieldType.isFunc)
+      if (field.type.isFunc)
         isFuncFieldCall = true
       else
         throw err("Expected method, not field '$errSig'", loc)
@@ -305,7 +305,7 @@ class CallResolver : CompilerSupport
       result = resolveToFieldExpr
       if (isFuncFieldCall)
       {
-        callMethod := ((CField)found).fieldType.method("call")
+        callMethod := ((CField)found).type.method("call")
         result = CallExpr.makeWithMethod(loc, result, callMethod, args)
       }
     }
@@ -334,7 +334,7 @@ class CallResolver : CompilerSupport
     if (method.isInstanceCtor)
       call.ctype = method.parent
     else
-      call.ctype = method.returnType
+      call.ctype = method.returns
 
     return call
   }
@@ -347,7 +347,7 @@ class CallResolver : CompilerSupport
     field.target = target
     field.name   = name
     field.field  = f
-    field.ctype  = f.fieldType
+    field.ctype  = f.type
     field.isSafe = expr.isSafe
 
     return field
@@ -386,7 +386,7 @@ class CallResolver : CompilerSupport
     // is expected to be a function type, then use that to
     // infer the type signature of the closure
     m := call.method
-    lastParam := m.params.last?.paramType?.deref?.toNonNullable as FuncType
+    lastParam := m.params.last?.type?.deref?.toNonNullable as FuncType
     if (lastParam != null && call.args.size == m.params.size &&
         c.signature.params.size <= lastParam.params.size)
     {
@@ -482,8 +482,8 @@ class CallResolver : CompilerSupport
     // then we also need an implicit cast operation
     base := foundOnIt ? this.baseIt : this.base
     result.ctype = base
-    if (method.inheritedReturnType != base)
-      result = TypeCheckExpr.coerce(result, base) { from = method.inheritedReturnType }
+    if (method.inheritedReturns != base)
+      result = TypeCheckExpr.coerce(result, base) { from = method.inheritedReturns }
   }
 
 //////////////////////////////////////////////////////////////////////////
@@ -548,3 +548,4 @@ class CallResolver : CompilerSupport
   Expr? result         // resolveToExpr()
 
 }
+

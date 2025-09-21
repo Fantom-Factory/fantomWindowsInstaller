@@ -6,6 +6,8 @@
 //   08 Oct 2024  Matthew Giannini  Creation
 //
 
+using util
+
 **
 ** Base class for all CommonMark AST nodes.
 **
@@ -34,6 +36,14 @@ abstract class Node
   ** Private storage for parent
   private Node? p
 
+  ** Get the root `Document` node or null if this node is mounted in a document yet
+  Document? doc()
+  {
+    Node? n := this
+    while(n != null && n isnot Document) n = n.parent
+    return n
+  }
+
   Node? next { private set }
 
   Node? prev { private set }
@@ -42,13 +52,18 @@ abstract class Node
 
   Node? lastChild { private set }
 
-  SourceSpan[]? sourceSpans := null
+  SourceSpan[] sourceSpans := SourceSpan[,] { private set }
+
+  ** Get the file location for this node from the original parsed source.
+  ** If the location is not known or source spans were not enabled during
+  ** parsing, then return `util::FileLoc.unknown`.
+  FileLoc loc()
   {
-    get
-    {
-      &sourceSpans == null ? SourceSpan#.emptyList : &sourceSpans.toImmutable
-    }
-    private set
+    if (sourceSpans.isEmpty) return FileLoc.unknown
+    file := doc?.file?.name ?: "inputs"
+    span := sourceSpans.first
+    // I think if the best way to report the location is using the first source span
+    return FileLoc(file, span.lineIndex+1, span.columnIndex+1)
   }
 
   ** Walk the AST using the given visitor. By default, we use reflection
@@ -63,7 +78,7 @@ abstract class Node
       // otherwise default back to calling generic visitors for custom nodes
       if (this is CustomNode) visitor.visitCustomNode(this)
       else if (this is CustomBlock) visitor.visitCustomBlock(this)
-      else throw ArgErr("no visit method found for ${this.typeof}")
+      // else throw ArgErr("no visit method found for ${this.typeof}")
     }
   }
 
@@ -136,22 +151,33 @@ abstract class Node
   Void addSourceSpan(SourceSpan? sourceSpan)
   {
     if (sourceSpan == null) return
-    if (sourceSpans == null) sourceSpans = SourceSpan[,]
-    sourceSpans.add(sourceSpan)
+    // Err("addSourceSpan").trace
+    this.sourceSpans.add(sourceSpan)
   }
 
   ** Replace the current source spans with the provided list
   Void setSourceSpans(SourceSpan[] sourceSpans)
   {
-    this.sourceSpans = sourceSpans.isEmpty ? null : sourceSpans.dup
+    // Err("setSourceSpans").trace
+    this.sourceSpans = sourceSpans.dup
   }
 
 //////////////////////////////////////////////////////////////////////////
 // Utils
 //////////////////////////////////////////////////////////////////////////
 
-  ** Get nodes between start (exclusive) and end (exclusive)
-  static Void eachBetween(Node start, Node end, |Node| f)
+  ** Get nodes between start (exclusive) and end (exclusive) by iterating
+  ** siblings of the start node.
+  **
+  ** pre>
+  ** // A -> B -> C-> D-> E
+  **         |->B1    |-> D1
+  **         |->B2
+  **
+  ** Node.eachBetween(A, D, f)    => f(B), f(C)
+  ** Node.eachBetween(B, null, f) => f(C), f(D), f(E)
+  ** <pre
+  static Void eachBetween(Node start, Node? end, |Node| f)
   {
     Node? node := start.next
     while (node != null && node !== end)
@@ -163,24 +189,45 @@ abstract class Node
     }
   }
 
-  ** Get all the children of the given parent node
-  static Node[] children(Node parent)
+  ** Get all the direct children of this node
+  Node[] children()
   {
     acc := Node[,]
-    for (child := parent.firstChild; child != null; child = child.next) acc.add(child)
+    for (child := this.firstChild; child != null; child = child.next) acc.add(child)
     return acc
   }
 
-  ** Recursively try to find a node with the given type within the children
-  ** of the specified node. Throw if node could not be found
-  static Node find(Node parent, Type nodeType)
+  ** Invoke the callback on each direct child of this node
+  Void eachChild(|Node| f)
   {
-    tryFind(parent, nodeType) ?: throw Err("${nodeType} not found")
+    for (child := this.firstChild; child != null; child = child.next) f(child)
+  }
+
+  ** Recursively try to find a node with the given type within the children
+  ** of this node. If checked, throw an error if the node could not be found;
+  ** otherwise return null.
+  Node? find(Type nodeType, Bool checked := true)
+  {
+    n := tryFind(this, nodeType)
+    if (n != null) return n
+    if (checked) throw Err("${nodeType} not found")
+    return null
+  }
+
+  ** Recursively find all children of this node for which the callback returns true
+  Node[] findAll(|Node->Bool| f)
+  {
+    acc := Node[,]
+    eachDescendant |node|
+    {
+      if (f(node)) acc.add(node)
+    }
+    return acc
   }
 
   ** Recursively try to find a node with the given type within the children of the
   ** specified node.
-  static Node? tryFind(Node parent, Type nodeType)
+  private Node? tryFind(Node parent, Type nodeType)
   {
     node := parent.firstChild
     while (node != null)
@@ -194,14 +241,16 @@ abstract class Node
     return null
   }
 
-  @NoDoc static Void eachChild(Node parent, |Node| f)
+  ** Recursively walk the descendants of this node using a depth-first search and
+  ** invoke the callback on each node.
+  Void eachDescendant(|Node| f)
   {
-    node := parent.firstChild
+    node := this.firstChild
     while (node != null)
     {
       saveNext := node.next
       f(node)
-      eachChild(node, f)
+      node.eachDescendant(f)
       node = saveNext
     }
   }
@@ -210,7 +259,7 @@ abstract class Node
   @NoDoc static Void dumpTree(Node node, OutStream out := Env.cur.out, Int indent := 0)
   {
     sp := " " * indent
-    out.writeChars("${sp}${node}\n")
+    out.writeChars("${sp}${node} ${node.loc}\n")
     child := node.firstChild
     while (child != null)
     {
@@ -313,9 +362,7 @@ class Emphasis : Node, Delimited
 class Text : Node
 {
   new make(Str literal) { this.literal = literal }
-
   Str literal
-
   override protected Str toStrAttributes() { "literal=${literal}" }
 }
 
@@ -329,6 +376,7 @@ class Code : Node
 {
   new make(Str literal) { this.literal = literal }
   const Str literal
+  override protected Str toStrAttributes() { "literal=${literal}" }
 }
 
 **************************************************************************
@@ -350,3 +398,4 @@ class HtmlInline : Node
 ** Custom node
 @Js
 class CustomNode : Node { }
+

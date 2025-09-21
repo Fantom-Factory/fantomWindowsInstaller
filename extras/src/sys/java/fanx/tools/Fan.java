@@ -109,7 +109,7 @@ public class Fan
   {
     LocalFile f = (LocalFile)(new LocalFile(file).normalize());
 
-    Map options = new Map(Sys.StrType, Sys.ObjType);
+    Map options = Map.make(Sys.StrType, Sys.ObjType);
     for (int i=0; args != null && i<args.length; ++i)
       if (args[i].equals("-fcodeDump")) options.add("fcodeDump", Boolean.TRUE);
 
@@ -168,7 +168,7 @@ public class Fan
     else if (((Param)params.get(0)).type().is(Sys.StrType.toListOf()) &&
              (params.sz() == 1 || ((Param)params.get(1)).hasDefault()))
     {
-      args = new List(Sys.ObjType, new Object[] { Env.cur().args() });
+      args = List.make(Sys.ObjType, new Object[] { Env.cur().args() });
     }
     else
     {
@@ -218,7 +218,7 @@ public class Fan
   static void version(String progName)
   {
     println(progName);
-    println("Copyright (c) 2006-2023, Brian Frank and Andy Frank");
+    println("Copyright (c) 2006-2025, Brian Frank and Andy Frank");
     println("Licensed under the Academic Free License version 3.0");
     println("");
     println("Java Runtime:");
@@ -255,14 +255,33 @@ public class Fan
     println("");
     println("Fantom Pods [" + (t2-t1)/1000000L + "ms]:");
 
-    println("  Pod                 Version");
-    println("  ---                 -------");
+    println("  Pod                 Version  Timestamp        File");
+    println("  ---                 -------  --------------   ----");
     for (int i=0; i<pods.sz(); ++i)
     {
       Pod pod = (Pod)pods.get(i);
       println("  " +
         FanStr.justl(pod.name(), 18L) + "  " +
-        FanStr.justl(pod.version().toString(), 8));
+        FanStr.justl(pod.version().toString(), 8) + "  " +
+        FanStr.justl(podTimestamp(pod), 14) + "  " +
+        FanStr.justl(pod.loadFile().osPath(), 32));
+    }
+  }
+
+  private static String podTimestamp(Pod pod)
+  {
+    try
+    {
+      String s = (String)pod.meta().get("build.ts");
+      if (s == null) return "";
+      DateTime dt = DateTime.fromStr(s, false);
+      if (dt == null) return s;
+      dt = dt.toTimeZone(TimeZone.cur());
+      return dt.toLocale("YY-MM-DD hh:mm");
+    }
+    catch (Throwable e)
+    {
+      return "";
     }
   }
 
@@ -347,3 +366,4 @@ public class Fan
   }
 
 }
+

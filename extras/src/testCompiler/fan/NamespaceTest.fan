@@ -82,11 +82,11 @@ class NamespaceTest : CompilerTest
     verifyEq(cs.qname, "sys::Buf.charset")
     verifyEq(cs.getter.qname, "sys::Buf.charset")
     verifyEq(cs.setter.qname, "sys::Buf.charset")
-    verifyEq(cs.getter.returnType.qname, "sys::Charset")
+    verifyEq(cs.getter.returns.qname, "sys::Charset")
     verifyEq(cs.getter.params.size, 0)
-    verifyEq(cs.setter.returnType.isVoid, true)
+    verifyEq(cs.setter.returns.isVoid, true)
     verifyEq(cs.setter.params.size, 1)
-    verifyEq(cs.setter.params[0].paramType.qname, "sys::Charset")
+    verifyEq(cs.setter.params[0].type.qname, "sys::Charset")
 
     // slots -> Int.echo
     slots := int.slots
@@ -95,15 +95,15 @@ class NamespaceTest : CompilerTest
     verifyEq(echo.name, "echo")
     verifyEq(echo.qname, "sys::Obj.echo")
     verifyEq(echo.signature, "sys::Void echo(sys::Obj? x)")
-    verifySame(echo.returnType, v)
+    verifySame(echo.returns, v)
     verifyEq(echo.params[0].name, "x")
-    verifyEq(echo.params[0].paramType, obj.toNullable)
+    verifyEq(echo.params[0].type, obj.toNullable)
     verifyEq(echo.params[0].hasDefault, true)
 
     // slots -> Int.hash
     hash := slots["hash"] as CMethod
     verifySame(hash.parent, int)
-    verifySame(hash.returnType, int)
+    verifySame(hash.returns, int)
     verify(hash.params.isEmpty)
     verifyEq(hash.isGeneric, false)
 
@@ -133,17 +133,17 @@ class NamespaceTest : CompilerTest
     get := (CMethod)list.slot("get")
     verifyEq(get.isGeneric, true)
     verifyEq(get.isParameterized, false)
-    verify(get.returnType.pod == pod)
-    verifyEq(get.returnType.name, "V")
-    verifyEq(get.returnType.qname, "sys::V")
-    verifyEq(get.returnType.isGeneric, false)
-    verifyEq(get.returnType.isParameterized, false)
-    verifyEq(get.returnType.isGenericParameter, true)
+    verify(get.returns.pod == pod)
+    verifyEq(get.returns.name, "V")
+    verifyEq(get.returns.qname, "sys::V")
+    verifyEq(get.returns.isGeneric, false)
+    verifyEq(get.returns.isParameterized, false)
+    verifyEq(get.returns.isGenericParameter, true)
     set := (CMethod)list.slot("set")
-    verifyEq(set.returnType.qname, "sys::L")
-    verifyEq(set.returnType.isGenericParameter, true)
-    verifyEq(set.params[1].paramType.qname, "sys::V")
-    verifyEq(set.params[1].paramType.isGenericParameter, true)
+    verifyEq(set.returns.qname, "sys::L")
+    verifyEq(set.returns.isGenericParameter, true)
+    verifyEq(set.params[1].type.qname, "sys::V")
+    verifyEq(set.params[1].type.isGenericParameter, true)
 
     // parameterized: Int[]
     ints := ListType.make(int)
@@ -169,30 +169,30 @@ class NamespaceTest : CompilerTest
     verifyEq(pget.isGeneric, false)
     verifyEq(pget.isParameterized, true)
     verifySame(pget.generic, get)
-    verifyEq(pget.returnType, int)
+    verifyEq(pget.returns, int)
     verifyEq(pget.params.size, 1)
     verifyEq(pget.params[0].name, "index")
-    verifyEq(pget.params[0].paramType, int)
+    verifyEq(pget.params[0].type, int)
 
     // parameterized method: List.set
     pset := (CMethod)ints.slot("set")
     verifyEq(pset.isGeneric, false)
     verifyEq(pset.isParameterized, true)
     verifySame(pset.generic, set)
-    verifySame(pset.returnType, ints)
+    verifySame(pset.returns, ints)
     verifyEq(pset.params.size, 2)
     verifyEq(pset.params[0].name, "index")
-    verifyEq(pset.params[0].paramType, int)
+    verifyEq(pset.params[0].type, int)
     verifyEq(pset.params[1].name, "item")
-    verifyEq(pset.params[1].paramType, int)
+    verifyEq(pset.params[1].type, int)
 
     // parameterized method: List.set
     peach := (CMethod)ints.slot("each")
     verifyEq(peach.isGeneric, false)
     verifyEq(peach.isParameterized, true)
     verifyEq(pset.params.size, 2)
-    verifyEq(pset.params[0].paramType, int)
-    verifyEq(pset.params[1].paramType, int)
+    verifyEq(pset.params[0].type, int)
+    verifyEq(pset.params[1].type, int)
 
     // parameterized type: Int:Str
     pmap := MapType.make(int, str)
@@ -218,14 +218,14 @@ class NamespaceTest : CompilerTest
     pset = (CMethod)pmap.slot("set")
     verifyEq(set.isGeneric, true)
     verifyEq(set.isParameterized, false)
-    verifyEq(set.returnType.qname, "sys::M")
-    verifyEq(set.params[0].paramType.qname, "sys::K")
-    verifyEq(set.params[1].paramType.qname, "sys::V")
+    verifyEq(set.returns.qname, "sys::M")
+    verifyEq(set.params[0].type.qname, "sys::K")
+    verifyEq(set.params[1].type.qname, "sys::V")
     verifyEq(pset.isGeneric, false)
     verifyEq(pset.isParameterized, true)
-    verifyEq(pset.returnType, pmap)
-    verifyEq(pset.params[0].paramType, int)
-    verifyEq(pset.params[1].paramType, str)
+    verifyEq(pset.returns, pmap)
+    verifyEq(pset.params[0].type, int)
+    verifyEq(pset.params[1].type, str)
 
     // parameterized type: |Str s->Int|
     pfunc := FuncType.make([str], ["s"], int)
@@ -252,45 +252,45 @@ class NamespaceTest : CompilerTest
     pcall := (CMethod)pfunc.slot("call")
     verifyEq(call.isGeneric, true)
     verifyEq(call.isParameterized, false)
-    verifyEq(call.returnType.qname, "sys::R")
-    verifyEq(call.params[0].paramType.qname, "sys::A")
-    verifyEq(call.params[1].paramType.qname, "sys::B")
+    verifyEq(call.returns.qname, "sys::R")
+    verifyEq(call.params[0].type.qname, "sys::A")
+    verifyEq(call.params[1].type.qname, "sys::B")
     verifyEq(pcall.isGeneric, false)
     verifyEq(pcall.isParameterized, true)
-    verifyEq(pcall.returnType, int)
-    verifyEq(pcall.params[0].paramType, str)
-    verifyEq(pcall.params[1].paramType, obj)
+    verifyEq(pcall.returns, int)
+    verifyEq(pcall.params[0].type, str)
+    verifyEq(pcall.params[1].type, obj)
 
     // parameterized parsing: Str[]
     strs := ns.resolveType(Str[]#.signature)
     verifyEq(strs.qname, "sys::List")
     verifyEq(strs.signature, "sys::Str[]")
     verifyEq(strs.isParameterized, true)
-    verifyEq(strs.slot("get")->returnType, str)
+    verifyEq(strs.slot("get")->returns, str)
 
     // parameterized parsing: Str[][]
     strs2 := ns.resolveType(Str[][]#.signature)
     verifyEq(strs2.qname, "sys::List")
     verifyEq(strs2.signature, "sys::Str[][]")
     verifyEq(strs2.isParameterized, true)
-    verifyEq(strs2.slot("get")->returnType, strs)
+    verifyEq(strs2.slot("get")->returns, strs)
 
     // parameterized parsing: Str[][]
     intBuf := ns.resolveType(Int:Buf#.signature)
     verifyEq(intBuf.qname, "sys::Map")
     verifyEq(intBuf.signature, "[sys::Int:sys::Buf]")
     verifyEq(intBuf.isParameterized, true)
-    verifyEq(intBuf.slot("set")->params->get(0)->paramType, int)
-    verifyEq(intBuf.slot("set")->params->get(1)->paramType, buf)
+    verifyEq(intBuf.slot("set")->params->get(0)->type, int)
+    verifyEq(intBuf.slot("set")->params->get(1)->type, buf)
 
     // parameterized parsing: |Int, Num->Str|
     m := ns.resolveType(|Int x, Num y->Str|#.signature)
     verifyEq(m.qname, "sys::Func")
     verifyEq(m.signature, "|sys::Int,sys::Num->sys::Str|")
     verifyEq(m.isParameterized, true)
-    verifyEq(m.slot("call")->returnType, str)
-    verifyEq(m.slot("call")->params->get(0)->paramType, int)
-    verifyEq(m.slot("call")->params->get(1)->paramType, num)
+    verifyEq(m.slot("call")->returns, str)
+    verifyEq(m.slot("call")->params->get(0)->type, int)
+    verifyEq(m.slot("call")->params->get(1)->type, num)
 
     // facets
     f := depend.facet("sys::Serializable")
@@ -485,3 +485,4 @@ class NamespaceTest : CompilerTest
   }
 
 }
+

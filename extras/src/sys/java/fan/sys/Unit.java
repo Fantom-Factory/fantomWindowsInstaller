@@ -11,7 +11,7 @@ import java.util.HashMap;
 import java.util.ArrayList;
 
 /**
- * Unit
+ * Unit models a unit of measurement.
  */
 public final class Unit
   extends FanObj
@@ -32,7 +32,7 @@ public final class Unit
     }
   }
 
-  public static List list()
+  public static List<Unit> list()
   {
     synchronized (list)
     {
@@ -40,12 +40,12 @@ public final class Unit
     }
   }
 
-  public static List quantities()
+  public static List<String> quantities()
   {
     return quantityNames;
   }
 
-  public static List quantity(String quantity)
+  public static List<Unit> quantity(String quantity)
   {
     List list = (List)quantities.get(quantity);
     if (list == null) throw Err.make("Unknown unit database quantity: " + quantity);
@@ -59,11 +59,10 @@ public final class Unit
     try
     {
       // open etc/sys/units.txt
-      String path = "etc/sys/units.txt";
       if (Sys.isJarDist)
-        in = new SysInStream(Unit.class.getClassLoader().getResourceAsStream(path));
+        in = new SysInStream(Unit.class.getClassLoader().getResourceAsStream("res/sys/units.txt"));
       else
-        in = Env.cur().findFile(Uri.fromStr(path)).in();
+        in = Env.cur().findFile(Uri.fromStr("etc/sys/units.txt")).in();
 
       // parse each line
       String curQuantityName = null;
@@ -249,7 +248,7 @@ public final class Unit
 
   public final String toStr() { return (String)ids.last(); }
 
-  public final List ids() { return ids; }
+  public final List<String> ids() { return ids; }
 
   public final String name() { return (String)ids.first(); }
 
@@ -504,7 +503,7 @@ public final class Unit
 
   public final double convertTo(double scalar, Unit to)
   {
-    if (dim != to.dim) throw Err.make("Incovertable units: " + this + " and " + to);
+    if (dim != to.dim) throw Err.make("Inconvertible units: " + this + " and " + to);
     return ((scalar * this.scale + this.offset) - to.offset) / to.scale;
   }
 
@@ -531,3 +530,4 @@ public final class Unit
   private final Dimension dim;
 
 }
+

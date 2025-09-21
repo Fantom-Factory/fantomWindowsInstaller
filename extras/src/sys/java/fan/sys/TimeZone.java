@@ -23,7 +23,7 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 
 /**
- * TimeZone
+ * TimeZone represents a region's offset from UTC and its daylight savings time rules.
  */
 public final class TimeZone
   extends FanObj
@@ -33,12 +33,12 @@ public final class TimeZone
 // Constructors
 //////////////////////////////////////////////////////////////////////////
 
-  public static List listNames()
+  public static List<String> listNames()
   {
     return new List(Sys.StrType, indexNames).ro();
   }
 
-  public static List listFullNames()
+  public static List<String> listFullNames()
   {
     List list = new List(Sys.StrType);
     for (int i=0; i<indexNames.length; ++i)
@@ -472,7 +472,7 @@ public final class TimeZone
   {
     if (Sys.isJarDist)
       return new DataInputStream(new BufferedInputStream(
-        TimeZone.class.getClassLoader().getResourceAsStream("etc/sys/timezones.ftz")));
+        TimeZone.class.getClassLoader().getResourceAsStream("res/sys/timezones.ftz")));
     else
       return new DataInputStream(new BufferedInputStream(
         new FileInputStream(dbFile)));
@@ -798,3 +798,4 @@ public final class TimeZone
   private Rule[] rules;    // reverse sorted by year
 
 }
+

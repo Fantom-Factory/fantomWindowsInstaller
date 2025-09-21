@@ -587,7 +587,7 @@ class ListTest : Test
   {
     if (expected != null)
     {
-echo("-- $list [$r] => " + list.getRange(r) + " ?= " + expected)
+      // echo("-- $list [$r] => " + list.getRange(r) + " ?= " + expected)
       verifyEq(list[r], expected)
       verifyEq(list.getRange(r), expected)
     }
@@ -966,7 +966,7 @@ echo("-- $list [$r] => " + list.getRange(r) + " ?= " + expected)
     acc.clear; x.eachRange(1..-1,  f); verifyEq(acc, ["b", "c", "d", "e"])
     acc.clear; x.eachRange(1..<-1, f); verifyEq(acc, ["b", "c", "d"])
 
-    acc.clear
+    verifySame(acc.clear, acc)
     indices := Int[,]
     x.eachRange(2..<5) |v,i| { acc.add(v); indices.add(i) }
     verifyEq(acc, ["c", "d", "e"])
@@ -1564,6 +1564,8 @@ echo("-- $list [$r] => " + list.getRange(r) + " ?= " + expected)
 
   Void testAssignOps()
   {
+    __noJava := true
+
     x := [1]
     x[0] += 1
     verifyEq(x.first, 2)
@@ -1774,6 +1776,25 @@ echo("-- $list [$r] => " + list.getRange(r) + " ?= " + expected)
     verifyErr(NotImmutableErr#) { [0, [this], 2].toImmutable }
   }
 
+//////////////////////////////////////////////////////////////////////////
+// Swizzle
+//////////////////////////////////////////////////////////////////////////
+
+  Void testSwizzles()
+  {
+    // verify slot reflection swizzles
+    verifyEq([1, 2, 3]->size, 3)
+    verifyEq([1, 2, 3]->add(4), [1, 2, 3, 4])
+    verifyEq([1, 2, 3]->clear, Int[,])
+
+    x := [1, 2, 3]
+    verifyEq(x->remove(2), 2)
+    verifyEq(x, [1, 3])
+
+    verifyEq(this->_foo, "works!")
+  }
+
+  Str _foo() { "works!"}
 }
 
 **************************************************************************

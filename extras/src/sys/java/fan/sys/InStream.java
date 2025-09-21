@@ -11,7 +11,7 @@ import java.math.*;
 import fanx.serial.*;
 
 /**
- * InStream interface.
+ * InStream is used to read binary and text stream based input.
  */
 public class InStream
   extends FanObj
@@ -431,7 +431,7 @@ public class InStream
   {
     if (in != null) return in.readChar();
     int ch = charsetDecoder.decode(this);
-    return ch < 0 ? null : Long.valueOf(ch);
+    return ch < 0 ? null : (long)ch;
   }
 
   public InStream unreadChar(long c)
@@ -439,7 +439,7 @@ public class InStream
     if (in != null)
       in.unreadChar(c);
     else
-      charsetEncoder.encode((char)c, this);
+      charsetEncoder.encode((int)c, this);
     return this;
   }
 
@@ -465,17 +465,16 @@ public class InStream
   }
 
   public String readLine() { return readLine(null); }
-  public String readLine(Long max)
+  public String readLine(final Long max)
   {
     // max limit
     int maxChars = Integer.MAX_VALUE;
     if (max != null)
     {
-      long maxLong = max.longValue();
-      if (maxLong == 0L) return "";
-      if (maxLong < 0L) throw ArgErr.make("Invalid max: " + max);
-      if (maxLong < Integer.MAX_VALUE)
-        maxChars = (int)maxLong;
+      if (max == 0L) return "";
+      if (max < 0L) throw ArgErr.make("Invalid max: " + max);
+      if (max < Integer.MAX_VALUE)
+        maxChars = max.intValue();
     }
 
     // read first char, if at end of file bail
@@ -497,7 +496,7 @@ public class InStream
       }
 
       // append to working buffer
-      buf.append((char)c);
+      buf.appendCodePoint(c);
       if (buf.length() >= maxChars) break;
 
       // read next char
@@ -508,11 +507,11 @@ public class InStream
   }
 
   public String readStrToken() { return readStrToken(null, null); }
-  public String readStrToken(Long max) { return readStrToken(max, null); }
-  public String readStrToken(Long max, Func f)
+  public String readStrToken(final Long max) { return readStrToken(max, null); }
+  public String readStrToken(final Long max, Func f)
   {
     // max limit
-    int maxChars = (max != null) ? max.intValue() : Integer.MAX_VALUE;
+    final int maxChars = (max != null) ? max.intValue() : Integer.MAX_VALUE;
     if (maxChars <= 0) return "";
 
     // read first char, if at end of file bail
@@ -528,7 +527,7 @@ public class InStream
       if (f == null)
         terminate = FanInt.isSpace(c);
       else
-        terminate = (Boolean)f.call(Long.valueOf(c));
+        terminate = (Boolean)f.call((long)c);
       if (terminate)
       {
         unreadChar(c);
@@ -536,7 +535,7 @@ public class InStream
       }
 
       // append to working buffer
-      buf.append((char)c);
+      buf.appendCodePoint(c);
       if (buf.length() >= maxChars) break;
 
       // read next char
@@ -547,7 +546,7 @@ public class InStream
   }
 
   public String readNullTerminatedStr() { return readNullTerminatedStr(null); }
-  public String readNullTerminatedStr(Long max)
+  public String readNullTerminatedStr(final Long max)
   {
     // max limit
     int maxChars = (max != null) ? max.intValue() : Integer.MAX_VALUE;
@@ -564,7 +563,7 @@ public class InStream
       if (c == '\0') break;
 
       // append to working buffer
-      buf.append((char)c);
+      buf.appendCodePoint(c);
       if (buf.length() >= maxChars) break;
 
       // read next char
@@ -574,7 +573,7 @@ public class InStream
     return buf.toString();
   }
 
-  public List readAllLines()
+  public List<String> readAllLines()
   {
     try
     {
@@ -605,44 +604,33 @@ public class InStream
   }
 
   public String readAllStr() { return readAllStr(true); }
-  public String readAllStr(boolean normalizeNewlines)
+  public String readAllStr(final boolean normalizeNewlines)
   {
     try
     {
-      char[] buf  = new char[4096];
-      int n = 0;
-      boolean normalize = normalizeNewlines;
+      final StringBuilder sb = new StringBuilder(4096);
 
       // read characters
       int last = -1;
       while (true)
       {
-        int c = rChar();
+        final int c = rChar();
         if (c < 0) break;
 
-        // grow buffer if needed
-        if (n >= buf.length)
-        {
-          char[] temp = new char[buf.length*2];
-          System.arraycopy(buf, 0, temp, 0, n);
-          buf = temp;
-        }
-
         // normalize newlines and add to buffer
-        if (normalize)
+        if (normalizeNewlines)
         {
-          if (c == '\r') buf[n++] = '\n';
+          if (c == '\r') sb.appendCodePoint('\n');
           else if (last == '\r' && c == '\n') {}
-          else buf[n++] = (char)c;
+          else sb.appendCodePoint(c);
           last = c;
         }
         else
         {
-          buf[n++] = (char)c;
+          sb.appendCodePoint(c);
         }
       }
-
-      return new String(buf, 0, n);
+      return sb.toString();
     }
     finally
     {
@@ -656,8 +644,8 @@ public class InStream
     return new ObjDecoder(this, options).readObj();
   }
 
-  public Map readProps() { return readProps(false); }
-  public Map readPropsListVals() { return readProps(true); }
+  public Map<String,String> readProps() { return readProps(false); }
+  public Map<String,List<String>> readPropsListVals() { return readProps(true); }
 
   private Map readProps(boolean listVals)  // listVals is Str:Str[]
   {
@@ -696,7 +684,7 @@ public class InStream
             name = new StringBuilder();
             val = null;
           }
-          else if (n.length() > 0)
+          else if (!n.isEmpty())
             throw IOErr.make("Invalid name/value pair [Line " + lineNum + "]");
           lineNum++;
           continue;
@@ -786,7 +774,7 @@ public class InStream
       String n = FanStr.makeTrim(name);
       if (val != null)
         addProp(props, n, FanStr.makeTrim(val), listVals);
-      else if (n.length() > 0)
+      else if (!n.isEmpty())
         throw IOErr.make("Invalid name/value pair [Line " + lineNum + "]");
 
       return props;
@@ -879,3 +867,4 @@ public class InStream
   int bitsBuf;
 
 }
+

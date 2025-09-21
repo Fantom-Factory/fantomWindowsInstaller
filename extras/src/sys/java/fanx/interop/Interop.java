@@ -222,7 +222,7 @@ public class Interop
    */
   public static List toFan(Enumeration e, Type of)
   {
-    List list = new List(of);
+    List list = List.make(of, 16);
     while (e.hasMoreElements()) list.add(e.nextElement());
     return list;
   }
@@ -240,7 +240,7 @@ public class Interop
    */
   public static List toFan(Iterator i, Type of)
   {
-    List list = new List(of);
+    List list = List.make(of, 16);
     while (i.hasNext()) list.add(i.next());
     return list;
   }
@@ -258,7 +258,7 @@ public class Interop
    */
   public static Map toFan(HashMap map)
   {
-    return new Map(new MapType(Sys.ObjType, Sys.ObjType.toNullable()), map);
+    return Type.makeMap(Sys.ObjType, Sys.ObjType.toNullable()).x.makeMap(map);
   }
 
   /**
@@ -266,7 +266,7 @@ public class Interop
    */
   public static Map toFan(HashMap map, Type type)
   {
-    return new Map((MapType)type, map);
+    return type.x.makeMap(map);
   }
 
   /**
@@ -284,3 +284,4 @@ public class Interop
   }
 
 }
+

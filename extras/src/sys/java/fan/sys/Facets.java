@@ -137,3 +137,4 @@ public final class Facets
   private List list;     // Facet[]
 
 }
+

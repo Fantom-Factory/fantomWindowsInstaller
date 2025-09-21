@@ -384,6 +384,15 @@ class FileTest : Test
     verifyEq(f.readProps, props)
   }
 
+  Void testWith()
+  {
+    f := tempDir + `testWith.txt`
+    f.withOut |out| { out.writeChars("test with"); }
+    verifyEq("test with", f.withIn |in->Obj?| { in.readAllStr })
+
+    verifyErr(IOErr#) { this.tempDir.plus(`missing.txt`).withIn |in->Obj?| { in.readAllStr } }
+  }
+
   Void testAvail()
   {
     f := tempDir + `testfile.txt`
@@ -748,4 +757,22 @@ class FileTest : Test
     verifyEq(actual, expected)
   }
 
+  Void testSynthetic()
+  {
+    // use reflection
+    File f := Type.find("util::SyntheticFile").make([`/bar/foo.txt`])
+    verifyEq(f.uri, `/bar/foo.txt`)
+    verifyEq(f.name, "foo.txt")
+    verifyEq(f.basename, "foo")
+    verifyEq(f.ext, "txt")
+    verifyEq(f.exists, false)
+    verifyEq(f.modified, null)
+    verifySame(f.normalize, f)
+    verifySame(f.parent, null)
+    verifySame(f.osPath, null)
+    verifyErr(IOErr#) { f.readAllStr }
+    verifyErr(IOErr#) { f.out.print("x").close }
+  }
+
 }
+

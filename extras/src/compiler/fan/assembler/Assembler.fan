@@ -44,6 +44,12 @@ class Assembler : CompilerSupport, FConst
     return fpod
   }
 
+  FPod assemblePodNoCode()
+  {
+    omitCode = true
+    return assemblePod
+  }
+
   private Str:Str assembleMeta()
   {
     meta := pod.meta
@@ -81,7 +87,7 @@ class Assembler : CompilerSupport, FConst
     f := FField(fparent)
     f.nameIndex = name(def.name)
     f.flags     = def.flags
-    f.typeRef   = typeRef(def.fieldType)
+    f.typeRef   = typeRef(def.type)
 
     attrs := AttrAsm(compiler, fpod)
     attrs.lineNumber(def.loc.line)
@@ -100,8 +106,8 @@ class Assembler : CompilerSupport, FConst
 
     m.nameIndex    = name(def.name)
     m.flags        = def.flags
-    m.ret          = typeRef(def.ret)
-    m.inheritedRet = typeRef(def.inheritedReturnType)
+    m.ret          = typeRef(def.returns)
+    m.inheritedRet = typeRef(def.inheritedReturns)
     m.paramCount   = def.params.size
     m.localCount   = def.vars.size - def.params.size
 
@@ -109,7 +115,7 @@ class Assembler : CompilerSupport, FConst
     {
       f := FMethodVar(m)
       f.nameIndex = name(v.name)
-      f.typeRef   = typeRef(v.paramDef?.paramType ?: v.ctype)
+      f.typeRef   = typeRef(v.paramDef?.type ?: v.ctype)
       f.flags     = v.flags
       if (v.paramDef != null)
       {
@@ -144,6 +150,8 @@ class Assembler : CompilerSupport, FConst
 
   private Buf? assembleCode(MethodDef def , AttrAsm attrs)
   {
+    if (omitCode) return null
+
     block := def.code
     if (block == null) return null
 
@@ -169,6 +177,7 @@ class Assembler : CompilerSupport, FConst
 // Fields
 //////////////////////////////////////////////////////////////////////////
 
-  FPod? fpod
+  private FPod? fpod
+  private Bool omitCode
 }
 

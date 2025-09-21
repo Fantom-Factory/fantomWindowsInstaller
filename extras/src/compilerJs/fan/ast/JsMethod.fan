@@ -20,7 +20,7 @@ class JsMethod : JsSlot
     this.isGetter   = m.isGetter
     this.isSetter   = m.isSetter
     this.params     = m.params.map |CParam p->JsMethodParam| { JsMethodParam(s, p) }
-    this.ret        = JsTypeRef(s, m.ret, m.loc)
+    this.ret        = JsTypeRef(s, m.returns, m.loc)
     this.hasClosure = ClosureFinder(m).exists
     // this.doc        = m.doc?.lines?.join("\n")
     if (m.ctorChain != null) this.ctorChain = JsExpr.makeFor(s, m.ctorChain)
@@ -156,7 +156,7 @@ class JsMethodParam : JsNode
     this.loc = p is Node ? ((Node)p).loc : null
     this.reflectName = p.name
     this.name = vnameToJs(p.name)
-    this.paramType = JsTypeRef(s, p.paramType, this.loc)
+    this.paramType = JsTypeRef(s, p.type, this.loc)
     this.hasDef = p.hasDefault
     if (hasDef) this.defVal = JsExpr.makeFor(s, p->def)
   }
@@ -203,3 +203,4 @@ internal class ClosureFinder : Visitor
   Node node
   Bool found := false
 }
+

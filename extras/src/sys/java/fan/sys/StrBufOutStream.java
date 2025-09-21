@@ -10,7 +10,7 @@ package fan.sys;
 import java.io.*;
 
 /**
- * StrBufOutStream
+ * StrBufOutStream implements OutStream using a StrBuf
  */
 public class StrBufOutStream
   extends OutStream
@@ -65,13 +65,13 @@ public class StrBufOutStream
 
   public OutStream writeChar(int c)
   {
-    sb.append((char)c);
+    sb.appendCodePoint(c);
     return this;
   }
 
   public OutStream writeChar(long c)
   {
-    sb.append((char)c);
+    sb.appendCodePoint((int)c);
     return this;
   }
 
@@ -111,3 +111,4 @@ public class StrBufOutStream
   StringBuilder sb;
 
 }
+

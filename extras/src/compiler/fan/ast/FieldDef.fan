@@ -20,9 +20,9 @@ public class FieldDef : SlotDef, CField
   new make(Loc loc, TypeDef parent, Str name := "?", Int flags := 0)
      : super(loc, parent)
   {
-    this.name = name
+    this.name  = name
     this.flags = flags
-    this.fieldType = parent.ns.errType
+    this.type  = parent.ns.errType
   }
 
 //////////////////////////////////////////////////////////////////////////
@@ -51,12 +51,12 @@ public class FieldDef : SlotDef, CField
   override CMethod? getter() { get }
   override CMethod? setter() { set }
 
-  override CType inheritedReturnType()
+  override CType inheritedReturns()
   {
     if (inheritedRet != null)
       return inheritedRet
     else
-      return fieldType
+      return type
   }
 
 //////////////////////////////////////////////////////////////////////////
@@ -81,7 +81,7 @@ public class FieldDef : SlotDef, CField
   {
     printFacets(out)
     out.flags(flags)
-    out.w(fieldType).w(" ")
+    out.w(type).w(" ")
     out.w(name)
     if (init != null) { out.w(" := "); init.print(out) }
     out.nl.nl
@@ -91,7 +91,7 @@ public class FieldDef : SlotDef, CField
 // Fields
 //////////////////////////////////////////////////////////////////////////
 
-  override CType fieldType  // field type
+  override CType type       // field type
   Field? field              // resolved finalized field
   Expr? init                // init expression or null
   Bool walkInit := true     // tree walk init expression
@@ -104,3 +104,4 @@ public class FieldDef : SlotDef, CField
   Str? closureInfo          // if this is a closure wrapper field
 
 }
+

@@ -132,7 +132,7 @@ class Normalize : CompilerStep
     loc := code.loc
 
     // we allow return keyword to be omitted if there is exactly one statement
-    if (code.size == 1 && !m.returnType.isVoid && code.stmts[0].id == StmtId.expr)
+    if (code.size == 1 && !m.returns.isVoid && code.stmts[0].id == StmtId.expr)
     {
       code.stmts[0] = ReturnStmt.makeSynthetic(code.stmts[0].loc, code.stmts[0]->expr)
       return
@@ -183,9 +183,9 @@ class Normalize : CompilerStep
       return
 
     // error checking
-    if (m.ret.isVoid) err("Once method '$m.name' cannot return Void", loc)
+    if (m.returns.isVoid) err("Once method '$m.name' cannot return Void", loc)
     if (!m.params.isEmpty) err("Once method '$m.name' cannot have parameters", loc)
-    if (m.ret.isForeign) err("Once method cannot be used with FFI type '$m.ret'", loc)
+    if (m.returns.isForeign) err("Once method cannot be used with FFI type '$m.returns'", loc)
 
     // field flags
     fieldFlags  := FConst.Private + FConst.Storage + FConst.Synthetic + FConst.Once
@@ -200,7 +200,7 @@ class Normalize : CompilerStep
     f := FieldDef(loc, curType)
     f.flags     = fieldFlags
     f.name      = m.name + "\$Store"
-    f.fieldType = ns.objType.toNullable
+    f.type      = ns.objType.toNullable
     f.init      = Expr.makeForLiteral(loc, ns, "_once_")
     curType.addSlot(f)
     if (isStatic)
@@ -212,7 +212,7 @@ class Normalize : CompilerStep
     x := MethodDef(loc, curType)
     x.flags        = methodFlags
     x.name         = m.name + "\$Once"
-    x.ret          = m.returnType
+    x.returns      = m.returns
     x.inheritedRet = null
     x.paramDefs    = m.paramDefs
     x.vars         = m.vars
@@ -277,7 +277,7 @@ class Normalize : CompilerStep
   private Void normalizeField(FieldDef f)
   {
     // validate type of field
-    t := f.fieldType
+    t := f.type
     if (t.isThis)   { err("Cannot use This as field type", f.loc); return }
     if (t.isVoid)   { err("Cannot use Void as field type", f.loc); return }
     if (!t.isValid) { err("Invalid type '$t'", f.loc); return }
@@ -313,7 +313,7 @@ class Normalize : CompilerStep
     if (init.explicitType != null) return
 
     // force explicit type to be defined type of field
-    init.explicitType = f.fieldType.toNonNullable as ListType
+    init.explicitType = f.type.toNonNullable as ListType
   }
 
   private Void inferFieldMapType(FieldDef f)
@@ -323,7 +323,7 @@ class Normalize : CompilerStep
     if (init.explicitType != null) return
 
     // force explicit type to be defined type of field
-    init.explicitType = f.fieldType.toNonNullable as MapType
+    init.explicitType = f.type.toNonNullable as MapType
   }
 
   private Void genSyntheticOverrideGet(FieldDef f)
