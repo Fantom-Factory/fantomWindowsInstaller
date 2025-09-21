@@ -1,4 +1,4 @@
-# Fantom v1.0.81 for Windows
+# Fantom v1.0.82 for Windows
 ---
 [![Written for: Fantom](http://img.shields.io/badge/written%20for-Fantom-lightgray.svg)](http://fantom-lang.org/)
 [![Licence: ISC](http://img.shields.io/badge/licence-ISC-blue.svg)](https://choosealicense.com/licenses/isc/)
